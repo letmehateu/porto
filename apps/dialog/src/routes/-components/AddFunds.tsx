@@ -1,18 +1,20 @@
 import * as Ariakit from '@ariakit/react'
+import { Env } from '@porto/apps'
 import { Button } from '@porto/apps/components'
 import { erc20Abi } from '@porto/apps/contracts'
 import { useCopyToClipboard, usePrevious } from '@porto/apps/hooks'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Cuer } from 'cuer'
+import { cx } from 'cva'
 import { type Address, Hex, Value } from 'ox'
 import { Actions, Hooks } from 'porto/remote'
 import * as React from 'react'
 import { useBalance, useWatchBlockNumber, useWatchContractEvent } from 'wagmi'
-import { PayButton } from '~/components/PayButton'
 import * as FeeTokens from '~/lib/FeeTokens'
-import { enableOnramp, stripeOnrampUrl } from '~/lib/Onramp'
+import { enableOnramp } from '~/lib/Onramp'
 import { porto } from '~/lib/Porto'
 import { Layout } from '~/routes/-components/Layout'
+import AppleIcon from '~icons/basil/apple-solid'
 import ArrowRightIcon from '~icons/lucide/arrow-right'
 import CopyIcon from '~icons/lucide/copy'
 import CardIcon from '~icons/lucide/credit-card'
@@ -21,7 +23,7 @@ import QrCodeIcon from '~icons/lucide/qr-code'
 import TriangleAlertIcon from '~icons/lucide/triangle-alert'
 import XIcon from '~icons/lucide/x'
 
-const presetAmounts = ['25', '50', '100', '250'] as const
+const presetAmounts = ['30', '50', '100', '250'] as const
 
 export function AddFunds(props: AddFunds.Props) {
   const {
@@ -45,9 +47,7 @@ export function AddFunds(props: AddFunds.Props) {
     'default' | 'deposit-crypto' | 'error'
   >('default')
 
-  const showOnramp = enableOnramp()
-
-  const deposit = useMutation({
+  const faucet = useMutation({
     async mutationFn(e: React.FormEvent<HTMLFormElement>) {
       e.preventDefault()
       e.stopPropagation()
@@ -74,20 +74,20 @@ export function AddFunds(props: AddFunds.Props) {
     },
   })
 
-  const loading = deposit.isPending
+  const loading = faucet.isPending
 
   const [editView, setEditView] = React.useState<'default' | 'editing'>(
     'default',
   )
 
-  if (deposit.isSuccess) return
+  if (faucet.isSuccess) return
 
   if (view === 'default')
     return (
       <Layout loading={loading} loadingTitle="Adding funds...">
         <Layout.Header>
           <Layout.Header.Default
-            content="Select how much you will deposit."
+            content="Select how much you will faucet."
             title="Deposit funds"
           />
         </Layout.Header>
@@ -95,7 +95,7 @@ export function AddFunds(props: AddFunds.Props) {
         <Layout.Content>
           <form
             className="grid h-min grid-flow-row auto-rows-min grid-cols-1 space-y-3"
-            onSubmit={(e) => deposit.mutate(e)}
+            onSubmit={(e) => faucet.mutate(e)}
           >
             <div className="col-span-1 row-span-1">
               <div className="flex max-h-[42px] w-full max-w-full flex-row justify-center space-x-2">
@@ -164,7 +164,15 @@ export function AddFunds(props: AddFunds.Props) {
               </div>
             </div>
             <div className="col-span-1 row-span-1 space-y-3.5">
-              {showOnramp ? (
+              <OnrampView
+                address={address}
+                amount={amount}
+                onApprove={onApprove}
+                onReject={onReject}
+              />
+
+              {/**
+              *  {showOnramp ? (
                 <PayButton
                   disabled={!address}
                   url={stripeOnrampUrl({
@@ -183,6 +191,7 @@ export function AddFunds(props: AddFunds.Props) {
                   Get started
                 </Button>
               )}
+              */}
             </div>
             <div className="col-span-1 row-span-1">
               <div className="my-auto flex w-full flex-row items-center gap-2 *:border-th_separator">
@@ -296,6 +305,146 @@ export declare namespace AddFunds {
     tokenAddress?: Address.Address | undefined
     value?: bigint | undefined
   }
+}
+
+export declare namespace OnrampView {
+  export type Props = {
+    address: Address.Address | undefined
+    amount: string | undefined
+    onApprove: (result: { id: Hex.Hex }) => void
+    onReject?: () => void
+  }
+}
+
+function OnrampView(props: OnrampView.Props) {
+  const { address, amount, onApprove, onReject } = props
+  const [hasError, setHasError] = React.useState<boolean>(false)
+
+  const showOnramp = enableOnramp()
+  const onrampURL = React.useMemo(() => {
+    const url = new URL('/onramp/global', import.meta.env.VITE_ONRAMP_URL)
+    const params = new URLSearchParams({
+      address: address!,
+      amount: amount!,
+      email: Date.now() + '@porto.mail',
+      key: import.meta.env.VITE_ONRAMP_KEY,
+      target: 'iframe',
+    })
+    url.search = params.toString()
+    return url.toString()
+  }, [address, amount])
+
+  const iframeRef = React.useRef<HTMLIFrameElement>(null)
+
+  const trustedOrigins = React.useMemo(
+    () =>
+      import.meta.env.DEV
+        ? [
+            `https://${Env.get()}.localhost:5173`,
+            `https://${Env.get()}.localhost:5174`,
+            `https://${Env.get()}.localhost:5175`,
+            import.meta.env.VITE_WORKERS_URL,
+            import.meta.env.VITE_ONRAMP_URL,
+          ]
+        : [
+            'https://porto.sh',
+            'https://id.porto.sh',
+            'https://stg.id.porto.sh',
+            'https://playground.porto.sh',
+            `https://${Env.get()}.porto.sh`,
+            `https://${Env.get()}.id.porto.sh`,
+            `https://${Env.get()}.playground.porto.sh`,
+            import.meta.env.VITE_WORKERS_URL,
+            import.meta.env.VITE_ONRAMP_URL,
+          ],
+    [],
+  )
+
+  React.useEffect(() => {
+    if (!iframeRef.current) return
+
+    const handleMessage = (event: MessageEvent) => {
+      if (!trustedOrigins.includes(event.origin)) {
+        console.warn('untrusted origin', event.origin, event.data)
+        return
+      }
+      if (event.data?.topic === 'rpc-requests') return
+      console.info('[onramp] Received:', event.data)
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [trustedOrigins])
+
+  // delay the iframe by 5 seconds. Show a fake apple pay button until then.
+  const [isLoading, setIsLoading] = React.useState<boolean>(true)
+  React.useEffect(() => {
+    setTimeout(() => setIsLoading(false), 5_000)
+  }, [])
+
+  return showOnramp ? (
+    <div className="flex flex-col justify-between">
+      <article className="relative mx-auto h-[60px] w-full select-none overflow-hidden">
+        <Button
+          className={cx('w-full cursor-pointer!', isLoading && 'opacity-50')}
+          disabled={isLoading}
+          variant="invert"
+        >
+          Buy with
+          <AppleIcon className="ml-1 inline size-5" />
+          <span className="mt-0.5 text-lg">Pay</span>
+        </Button>
+
+        <iframe
+          allow="payment *; public-key-credentials-create *; clipboard-read *; clipboard-write *; sync-xhr *; document-domain *; geolocation *; publickey-credentials-get *; camera *; microphone *;"
+          allowFullScreen
+          // @ts-expect-error
+          allowtransparency="true"
+          className="absolute top-0 mx-auto h-[40px] w-full border-none"
+          frameBorder={0}
+          loading="eager"
+          name="onramp"
+          onError={(event) => {
+            console.error('[onramp] Error:', event)
+            setHasError(true)
+          }}
+          ref={iframeRef}
+          role="presentation"
+          sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts"
+          scrolling="no"
+          src={onrampURL}
+          style={{
+            border: '0px !important',
+            minWidth: '100% !important',
+            opacity: '0%',
+            padding: '0px !important',
+            transform: 'translateY(-30%) scale(1.5)',
+          }}
+          title="onramp"
+        />
+      </article>
+      <p className="-mb-4 text-[10px] text-primary">
+        By starting this process, you are agreeing to{' '}
+        <a
+          className="text-accent"
+          href="https://mercuryo.io/terms-and-conditions"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          Mercuryo's terms and conditions
+        </a>
+      </p>
+    </div>
+  ) : (
+    <Button
+      className="w-full flex-1"
+      data-testid="buy"
+      type="submit"
+      variant="primary"
+    >
+      Get started
+    </Button>
+  )
 }
 
 function DepositCryptoView(props: DepositCryptoView.Props) {

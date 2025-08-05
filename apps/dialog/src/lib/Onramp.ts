@@ -4,7 +4,45 @@ export function enableOnramp() {
   const dialogSearchParams = new URLSearchParams(window.location.search)
   const onrampEnabled = dialogSearchParams.get('onramp') === 'true'
 
-  return Env.get() === 'prod' || onrampEnabled
+  return (
+    Env.get() === 'prod' || onrampEnabled || import.meta.env.VITE_ENABLE_ONRAMP
+  )
+}
+
+export function integratedOnrampUrl(params: integratedOnrampUrl.Params) {
+  const { address, amount = 40, email, redirect = 'false' } = params
+  if (amount < 37 || amount > 5_000) {
+    console.warn(
+      `Invalid amount for onramp: ${amount}. Must be between 37 and 5,000.`,
+    )
+    throw new Error(
+      `Invalid amount for onramp: ${amount}. Must be between 37 and 5,000.`,
+    )
+  }
+
+  const searchParams = new URLSearchParams({
+    address,
+    amount: amount.toString(),
+    email,
+    redirect,
+  })
+
+  const url = new URL(
+    '/onramp',
+    import.meta.env.VITE_PORTO_WORKERS_URL ||
+      'https://octopus.porto.workers.dev',
+  )
+  url.search = searchParams.toString()
+  return url.toString()
+}
+
+export declare namespace integratedOnrampUrl {
+  type Params = {
+    email: string
+    amount: number
+    address: string
+    redirect?: 'true' | 'false'
+  }
 }
 
 /**
@@ -15,7 +53,7 @@ export function enableOnramp() {
  * SSN: 0000
  */
 
-export function stripeOnrampUrl(params: stripeOnrampUrl.Params) {
+export function externalOnrampUrl(params: externalOnrampUrl.Params) {
   if (params.amount < 1 || params.amount > 30_000) {
     console.warn(
       `Invalid amount for Stripe onramp: ${params.amount}. Must be between 1 and 30,000.`,
@@ -31,12 +69,12 @@ export function stripeOnrampUrl(params: stripeOnrampUrl.Params) {
     source_amount: params.amount.toString(),
     source_currency: 'usd',
   })
-  const url = new URL('/onramp', import.meta.env.VITE_WORKERS_URL)
+  const url = new URL('/onramp/external', import.meta.env.VITE_WORKERS_URL)
   url.search = searchParams.toString()
   return url.toString()
 }
 
-export declare namespace stripeOnrampUrl {
+export declare namespace externalOnrampUrl {
   type Params = {
     amount: number
     address: string
