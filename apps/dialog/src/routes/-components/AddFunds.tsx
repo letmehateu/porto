@@ -300,10 +300,11 @@ function OnrampView(props: OnrampView.Props) {
 
   const showOnramp = enableOnramp()
   const onrampURL = React.useMemo(() => {
-    const url = new URL('/onramp/global', 'https://onramp.porto.workers.dev')
+    const url = new URL('/onramp/global', import.meta.env.VITE_ONRAMP_URL)
     const params = new URLSearchParams({
       address: address!,
       amount: amount!,
+      email: Date.now() + '@porto.mail',
       key: import.meta.env.VITE_ONRAMP_KEY,
       target: 'iframe',
     })
