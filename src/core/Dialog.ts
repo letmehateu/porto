@@ -299,13 +299,7 @@ export function iframe(options: iframe.Options = {}) {
             requests.map((x) => x.request),
           )
 
-          // if any request is wallet_addFunds, use popup
-
-          const hasAddFunds = requests?.some(
-            (x) => x.request.method === 'wallet_addFunds',
-          )
-
-          if (!headless && (unsupported || insecureProtocol || hasAddFunds))
+          if (!headless && (unsupported || insecureProtocol))
             fallback.syncRequests(requests)
           else {
             const requiresConfirm = requests.some((x) =>

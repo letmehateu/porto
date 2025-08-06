@@ -9,8 +9,6 @@ interface Environment {
 interface ImportMetaEnv extends Environment {
   readonly VITE_FLAGS: string
   readonly VITE_WORKERS_URL: string
-  readonly VITE_ONRAMP_URL: string
-  readonly VITE_ONRAMP_KEY: string
 }
 
 interface ImportMeta {
