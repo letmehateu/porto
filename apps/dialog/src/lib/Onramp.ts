@@ -4,12 +4,8 @@ export function enableOnramp() {
   const dialogSearchParams = new URLSearchParams(window.location.search)
   const onrampEnabled = dialogSearchParams.get('onramp') === 'true'
 
-  const env = Env.get()
   return (
-    env === 'prod' ||
-    env === 'dev' ||
-    onrampEnabled ||
-    import.meta.env.VITE_ENABLE_ONRAMP
+    Env.get() === 'prod' || onrampEnabled || import.meta.env.VITE_ENABLE_ONRAMP
   )
 }
 

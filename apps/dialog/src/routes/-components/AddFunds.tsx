@@ -170,6 +170,28 @@ export function AddFunds(props: AddFunds.Props) {
                 onApprove={onApprove}
                 onReject={onReject}
               />
+
+              {/**
+              *  {showOnramp ? (
+                <PayButton
+                  disabled={!address}
+                  url={stripeOnrampUrl({
+                    address: address!,
+                    amount: Number(amount),
+                  })}
+                  variant="stripe"
+                />
+              ) : (
+                <Button
+                  className="w-full flex-1"
+                  data-testid="buy"
+                  type="submit"
+                  variant="primary"
+                >
+                  Get started
+                </Button>
+              )}
+              */}
             </div>
             <div className="col-span-1 row-span-1">
               <div className="my-auto flex w-full flex-row items-center gap-2 *:border-th_separator">
@@ -342,7 +364,10 @@ function OnrampView(props: OnrampView.Props) {
     if (!iframeRef.current) return
 
     const handleMessage = (event: MessageEvent) => {
-      if (!trustedOrigins.includes(event.origin)) return
+      if (!trustedOrigins.includes(event.origin)) {
+        console.warn('untrusted origin', event.origin, event.data)
+        return
+      }
       if (event.data?.topic === 'rpc-requests') return
       console.info('[onramp] Received:', event.data)
     }
