@@ -295,8 +295,8 @@ export declare namespace OnrampView {
 }
 
 function OnrampView(props: OnrampView.Props) {
-  const { address, amount, onApprove, onReject } = props
-  const [hasError, setHasError] = React.useState<boolean>(false)
+  const { address, amount } = props
+  const [_hasError, setHasError] = React.useState<boolean>(false)
 
   const showOnramp = enableOnramp()
   const onrampURL = React.useMemo(() => {
