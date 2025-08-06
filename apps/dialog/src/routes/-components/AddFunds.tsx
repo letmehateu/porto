@@ -304,7 +304,6 @@ function OnrampView(props: OnrampView.Props) {
     const params = new URLSearchParams({
       address: address!,
       amount: amount!,
-      key: import.meta.env.VITE_ONRAMP_KEY,
       target: 'iframe',
     })
     url.search = params.toString()
