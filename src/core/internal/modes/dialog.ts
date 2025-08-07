@@ -269,13 +269,11 @@ export function dialog(parameters: dialog.Parameters = {}) {
           storage,
         })
 
-        if (authUrl) {
-          const response = await fetch(authUrl.logout, {
+        if (authUrl)
+          await fetch(authUrl.logout, {
             credentials: 'include',
             method: 'POST',
-          })
-          if (!response.ok) throw new Error('failed to logout.')
-        }
+          }).catch(() => {})
       },
 
       async getAccountVersion(parameters) {
