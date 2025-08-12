@@ -27,7 +27,7 @@ export const defaultConfig = {
   ...Porto_.defaultConfig,
   messenger,
   methodPolicies: MethodPolicies.methodPolicies,
-  mode: Mode.contract(),
+  mode: Mode.rpcServer(),
   storage: Storage.localStorage(),
 } as const satisfies Config
 
@@ -56,6 +56,7 @@ export function create(
     messenger = defaultConfig.messenger,
     methodPolicies = defaultConfig.methodPolicies,
     merchantRpcUrl,
+    relay = defaultConfig.relay,
     storage = defaultConfig.storage,
     storageKey = defaultConfig.storageKey,
     transports = defaultConfig.transports,
@@ -67,6 +68,7 @@ export function create(
     feeToken,
     merchantRpcUrl,
     mode,
+    relay,
     storage,
     storageKey,
     transports,
