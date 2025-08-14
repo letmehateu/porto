@@ -3,7 +3,13 @@ import { Hono } from 'hono'
 import { getConnInfo } from 'hono/cloudflare-workers'
 import { validator } from 'hono/validator'
 import { Chains } from 'porto'
-import { createWalletClient, http, isAddress, publicActions } from 'viem'
+import {
+  type Address,
+  createWalletClient,
+  http,
+  isAddress,
+  publicActions,
+} from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { waitForTransactionReceipt } from 'viem/actions'
 
@@ -41,7 +47,7 @@ faucetApp.on(
       address,
       chainId,
       value = '25',
-      rpcSplit = false,
+      overrideTokenAddress,
     } = <Record<string, string>>values
 
     if (!address || !isAddress(address))
@@ -53,10 +59,11 @@ faucetApp.on(
     )
       return context.json({ error: 'Valid chainId required' }, 400)
 
-    return { address, chainId, rpcSplit, value: BigInt(value) }
+    return { address, chainId, overrideTokenAddress, value: BigInt(value) }
   }),
   async (context) => {
-    const { address, chainId, value, rpcSplit } = context.req.valid('query')
+    const { address, chainId, value, overrideTokenAddress } =
+      context.req.valid('query')
 
     const account = privateKeyToAccount(context.env.DRIP_PRIVATE_KEY)
     const client = createWalletClient({
@@ -70,9 +77,9 @@ faucetApp.on(
 
     const hash = await client.writeContract({
       abi: exp1Abi,
-      address: rpcSplit
-        ? '0x3A9b126BF65C518F1E02602BD77bD1288147F94C'
-        : exp1Address[chainId as unknown as keyof typeof exp1Address],
+      address:
+        (overrideTokenAddress as Address) ||
+        exp1Address[chainId as unknown as keyof typeof exp1Address],
       args: [address, value],
       functionName: 'mint',
       maxFeePerGas: maxFeePerGas * 2n,
