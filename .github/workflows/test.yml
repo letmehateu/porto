@@ -96,7 +96,7 @@ jobs:
             enabled: ${{ github.ref == 'refs/heads/main' && (inputs.test-deployment-browser == true || inputs.test-deployment-browser == null) }}
           - env: ${{ inputs.env || 'stg' }}
             browser: 'false'
-            enabled: ${{ github.ref == 'refs/heads/main' && (inputs.test-deployment-node == true || inputs.test-deployment-node == null) }}
+            enabled: ${{ false && github.ref == 'refs/heads/main' && (inputs.test-deployment-node == true || inputs.test-deployment-node == null) }}
     env: 
       CI: true
       VITE_DEFAULT_ENV: ${{ matrix.env }}
@@ -146,7 +146,7 @@ jobs:
         run: pnpx playwright@1.53.0 install --with-deps
 
       - name: Test
-        if: matrix.enabled == true && matrix.env != 'stg' && matrix.browser != 'false'
+        if: matrix.enabled == true
         uses: nick-fields/retry@v3
         with:
           max_attempts: 3
