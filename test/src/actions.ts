@@ -103,5 +103,6 @@ export async function setBalance(
     await waitForTransactionReceipt(client, {
       hash,
     })
+    await new Promise((resolve) => setTimeout(resolve, 1_000))
   }
 }
