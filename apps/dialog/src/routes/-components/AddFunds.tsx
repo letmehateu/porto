@@ -2,6 +2,7 @@ import * as Ariakit from '@ariakit/react'
 import { Button } from '@porto/apps/components'
 import { erc20Abi } from '@porto/apps/contracts'
 import { useCopyToClipboard, usePrevious } from '@porto/apps/hooks'
+import * as UI from '@porto/ui'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Cuer } from 'cuer'
 import { type Address, Hex, Value } from 'ox'
@@ -79,8 +80,6 @@ export function AddFunds(props: AddFunds.Props) {
     },
   })
 
-  const loading = deposit.isPending
-
   const [editView, setEditView] = React.useState<'default' | 'editing'>(
     defaultValue ? 'editing' : 'default',
   )
@@ -89,7 +88,7 @@ export function AddFunds(props: AddFunds.Props) {
 
   if (view === 'default')
     return (
-      <Layout loading={loading} loadingTitle="Adding funds...">
+      <Layout>
         <Layout.Header>
           <Layout.Header.Default
             content="Select how much you will deposit."
@@ -171,7 +170,7 @@ export function AddFunds(props: AddFunds.Props) {
             <div className="col-span-1 row-span-1 space-y-3.5">
               {showOnramp ? (
                 <PayButton
-                  disabled={!address}
+                  disabled={!address || !amount || Number(amount) === 0}
                   url={stripeOnrampUrl({
                     address: address!,
                     amount: Number(amount),
@@ -179,14 +178,16 @@ export function AddFunds(props: AddFunds.Props) {
                   variant="stripe"
                 />
               ) : (
-                <Button
-                  className="w-full flex-1"
+                <UI.Button
                   data-testid="buy"
+                  disabled={!amount || Number(amount) === 0}
+                  loading={deposit.isPending && 'Adding funds…'}
                   type="submit"
                   variant="primary"
+                  width="full"
                 >
-                  Get started
-                </Button>
+                  Add funds
+                </UI.Button>
               )}
             </div>
             <div className="col-span-1 row-span-1">
@@ -199,6 +200,7 @@ export function AddFunds(props: AddFunds.Props) {
             <div className="col-span-1 row-span-1">
               <Button
                 className="w-full px-3!"
+                disabled={deposit.isPending}
                 onClick={() => setView('deposit-crypto')}
                 type="button"
               >
@@ -245,7 +247,6 @@ export function AddFunds(props: AddFunds.Props) {
     return (
       <DepositCryptoView
         address={address}
-        loading={loading}
         onApprove={onApprove}
         onBack={() => setView('default')}
       />
@@ -305,7 +306,7 @@ export declare namespace AddFunds {
 }
 
 function DepositCryptoView(props: DepositCryptoView.Props) {
-  const { address, loading, onBack, onApprove } = props
+  const { address, onBack, onApprove } = props
 
   const chain = Hooks.useChain(porto)
 
@@ -359,7 +360,7 @@ function DepositCryptoView(props: DepositCryptoView.Props) {
   })
 
   return (
-    <Layout loading={loading} loadingTitle="Adding funds...">
+    <Layout>
       <Layout.Content className="py-3 text-center">
         <Ariakit.Button
           className="mx-auto flex h-[148px] items-center justify-center gap-4 rounded-lg border border-th_secondary bg-th_secondary p-4 hover:cursor-pointer!"
@@ -417,7 +418,6 @@ function DepositCryptoView(props: DepositCryptoView.Props) {
 export declare namespace DepositCryptoView {
   export type Props = {
     address: Address.Address | undefined
-    loading: boolean
     onBack: () => void
     onApprove: (result: { id: Hex.Hex }) => void
   }
