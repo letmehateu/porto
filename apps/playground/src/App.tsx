@@ -101,7 +101,6 @@ export function App() {
             <option value="iframe-dialog">Dialog (iframe)</option>
             <option value="popup-dialog">Dialog (popup)</option>
             <option value="inline-dialog">Dialog (inline)</option>
-            <option value="contract">Contract</option>
             <option value="rpc">RPC Server</option>
           </select>
         </div>
@@ -194,7 +193,7 @@ export function App() {
       {mode === 'inline-dialog' && (
         <div className="fixed top-0 bottom-0 left-[calc(768px+var(--spacing)*2)] w-[300px] p-4">
           <div
-            className="h-full overflow-hidden rounded-md border border-1 border-th_frame"
+            className="h-full overflow-hidden rounded-md border border-th_frame"
             id="porto"
           />
         </div>
