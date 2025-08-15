@@ -146,8 +146,7 @@ jobs:
         run: pnpx playwright@1.53.0 install --with-deps
 
       - name: Test
-        if: matrix.enabled == true
-        continue-on-error: matrix.env == 'stg' && matrix.browser == 'true'
+        if: matrix.enabled == true && matrix.env == 'stg' && matrix.browser == 'true'
         uses: nick-fields/retry@v3
         with:
           max_attempts: 3
