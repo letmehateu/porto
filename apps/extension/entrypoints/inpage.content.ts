@@ -3,8 +3,9 @@ import { Dialog, Mode, Porto } from 'porto'
 export default defineContentScript({
   main() {
     let porto: Porto.Porto | undefined
-    function init(prod?: boolean) {
-      porto = prod ? Porto.unstable_create() : Porto.create()
+    function init(_prod?: boolean) {
+      // porto = prod ? Porto.unstable_create() : Porto.create()
+      porto = Porto.unstable_create()
       ;(window as any).ethereum = porto.provider
     }
 
