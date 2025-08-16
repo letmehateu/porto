@@ -16,6 +16,7 @@ import * as FeeTokens from '~/lib/FeeTokens'
 import { enableOnramp, getOnrampWidget, stripeOnrampUrl } from '~/lib/Onramp.ts'
 import { porto } from '~/lib/Porto'
 import { Layout } from '~/routes/-components/Layout'
+import { StringFormatter } from '~/utils'
 import ArrowRightIcon from '~icons/lucide/arrow-right'
 import CopyIcon from '~icons/lucide/copy'
 import CardIcon from '~icons/lucide/credit-card'
@@ -549,7 +550,7 @@ function OnrampView(props: OnrampView.Props) {
     refetchInterval: 1_000,
   })
 
-  if (onrampQuery.isError) {
+  if (showOnramp && !isFirefox && onrampQuery.isError) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 p-4 text-center">
         <TriangleAlertIcon className="size-6 text-th_field-error" />
@@ -586,18 +587,16 @@ function OnrampView(props: OnrampView.Props) {
               id="mercuryo-widget"
             />
           </article>
-          {transactionQuery.data && (
-            <>
-              <p>[{transactionQuery.data.status}]</p>
+          {transactionQuery.data &&
+            transactionQuery.data.status !== 'not_found' && (
               <a
                 className="text-center"
                 href={transactionQuery.data.url}
                 target="_blank"
               >
-                transaction hash
+                {StringFormatter.truncate(transactionQuery.data.hash)}
               </a>
-            </>
-          )}
+            )}
         </>
       )}
     </div>
