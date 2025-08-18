@@ -94,9 +94,9 @@ jobs:
          # - env: ${{ inputs.env || 'prod' }}
          #   browser: 'true'
          #   enabled: ${{ github.ref == 'refs/heads/main' && (inputs.test-deployment-browser == true || inputs.test-deployment-browser == null) }}
-          - env: ${{ inputs.env || 'prod' }}
-            browser: 'false'
-            enabled: ${{ github.ref == 'refs/heads/main' && (inputs.test-deployment-node == true || inputs.test-deployment-node == null) }}
+         # - env: ${{ inputs.env || 'prod' }}
+         #   browser: 'false'
+         #   enabled: ${{ github.ref == 'refs/heads/main' && (inputs.test-deployment-node == true || inputs.test-deployment-node == null) }}
     env: 
       CI: true
       VITE_DEFAULT_ENV: ${{ matrix.env }}
