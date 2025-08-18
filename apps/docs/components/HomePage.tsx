@@ -644,13 +644,13 @@ export function BuyNow(props: { chainId: ChainId; next: () => void }) {
         onClick={() => {
           const exp1Token =
             exp1Config.address[chainId as keyof (typeof exp1Config)['address']]
-          if (exp1Token) {
+          if (!exp1Token) {
             console.warn(`exp1 address not defined for chainId ${chainId}`)
             return
           }
           const expNft =
             expNftConfig.address[chainId as keyof typeof expNftConfig.address]
-          if (expNft) {
+          if (!expNft) {
             console.warn(`expNft address not defined for chainId ${chainId}`)
             return
           }
@@ -817,7 +817,7 @@ export function SendTip(props: {
         onClick={() => {
           const exp1Token =
             exp1Config.address[chainId as keyof (typeof exp1Config)['address']]
-          if (exp1Token) {
+          if (!exp1Token) {
             console.warn(`exp1 address not defined for chainId ${chainId}`)
             return
           }
@@ -936,7 +936,7 @@ export function Subscribe(props: {
 
       const exp1Token =
         exp1Config.address[chainId as keyof (typeof exp1Config)['address']]
-      if (exp1Token) {
+      if (!exp1Token) {
         console.warn(`exp1 address not defined for chainId ${chainId}`)
         return
       }
