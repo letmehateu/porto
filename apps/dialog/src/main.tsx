@@ -27,7 +27,26 @@ if (import.meta.env.PROD) {
 }
 
 const offInitialized = Events.onInitialized(porto, (payload, event) => {
-  const { mode, referrer, theme } = payload
+  const { chainIds, mode, referrer, theme } = payload
+
+  // Ensure we are synced with the Application's active chain.
+  const chainId = chainIds?.[0]
+  if (chainId) {
+    const dialogChainIds = porto._internal.store.getState().chainIds as [
+      number,
+      ...number[],
+    ]
+
+    // Only sync if the dialog supports the active chain.
+    if (dialogChainIds.includes(chainId))
+      porto._internal.store.setState((x) => ({
+        ...x,
+        chainIds: [
+          chainId,
+          ...x.chainIds.filter((id) => id !== chainId),
+        ] as never,
+      }))
+  }
 
   Dialog.store.setState({
     mode,
