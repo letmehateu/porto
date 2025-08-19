@@ -94,7 +94,7 @@ export namespace wallet_addFunds {
 export namespace eth_accounts {
   export const Request = Schema.Struct({
     method: Schema.Literal('eth_accounts'),
-    params: Schema.optional(Schema.Undefined),
+    params: Schema.optional(Schema.Unknown),
   }).annotations({
     identifier: 'Rpc.eth_accounts.Request',
   })
