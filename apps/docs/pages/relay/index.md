@@ -4,8 +4,6 @@ The Relay uses JSON-RPC 2.0 to facilitate communication between the Porto SDK an
 
 Execution is paid for in one of the fee tokens accepted by the RPC on a given network. You can get the supported fee tokens for a chain by querying [`wallet_getCapabilities`].
 
-The Relay has passthrough to a standard Ethereum node.
-
 :::note
 We'd love to hear your feedback. Report any issues or feature suggestions [on the issue tracker](https://github.com/ithacaxyz/relay-issues).
 :::
@@ -55,22 +53,6 @@ For more details on how accounts work, see the [Account documentation](#TODO).
 Intents are executed in two steps. First, [`wallet_prepareCalls`] is called to simulate the call and estimate fees. A context is returned with the built intent, which also includes a quote signed by the Relay, which expires after some time. The built intent is verified and signed by the user's key, and the quote plus the signed intent is sent to the Relay with [`wallet_sendPreparedCalls`].
 
 The Relay will validate that the quote is still valid, that the intent was signed, and will then include it in a transaction on the destination chain. [`wallet_sendPreparedCalls`] returns an opaque identifier that is the equivalent of a transaction hash. To get the status of an intent, plus any transaction receipts for the intent, you must use [`wallet_getCallsStatus`].
-
-## Passthrough
-
-The Relay passes through known Ethereum JSON-RPC methods to an underlying network of nodes for the corresponding chain. For example, you can query the block number or chain ID:
-
-```sh
-cast chain-id --rpc-url https://base-sepolia.rpc.ithaca.xyz
-
-# 84532
-```
-
-```sh
-cast block-number --rpc-url https://base-sepolia.rpc.ithaca.xyz
-
-# 30568194
-```
 
 [`wallet_getCapabilities`]: /relay/wallet_getCapabilities
 [`wallet_prepareUpgradeAccount`]: /relay/wallet_prepareUpgradeAccount

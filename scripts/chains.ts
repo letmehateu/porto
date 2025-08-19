@@ -76,6 +76,12 @@ for (const environment of environments) {
       ...supportedChains,
     ])
     await writeFile(chainsPath, content)
+
+    const docsPath = './apps/docs/pages/sdk/api/chains.mdx'
+    console.log(`Updating ${docsPath}`)
+    const docsFile = await readFile(docsPath, 'utf8')
+    const docsContent = replaceChainsSupportedTable(docsFile, supportedChains)
+    await writeFile(docsPath, docsContent)
   }
 }
 
@@ -163,5 +169,22 @@ function replaceChainsForViemChainsExport(
     const indent = '  '
     const chainsList = newChains.map((chain) => `${indent}${chain}`).join(',\n')
     return `export {\n${chainsList},\n} from 'viem/chains'`
+  })
+}
+
+function replaceChainsSupportedTable(content: string, newChains: string[]) {
+  const pattern =
+    /(\|\s*Chain\s*\|\s*Value\s*\|\s*\n\|\s*-+\s*\|\s*-+\s*\|\s*\n)([\s\S]*?)(?=\n\n|\n(?=##))/
+
+  return content.replace(pattern, (_match, tableHeader) => {
+    const rows = newChains
+      .map((chain) => {
+        // biome-ignore lint/performance/noDynamicNamespaceImportAccess: _
+        const displayName = Chains[chain as keyof typeof Chains].name
+        return `| ${displayName} | \`Chains.${chain}\` |`
+      })
+      .join('\n')
+
+    return `${tableHeader}${rows}`
   })
 }

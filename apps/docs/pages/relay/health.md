@@ -19,7 +19,7 @@ type Response = string; // the version
 ## Example
 
 ```sh
-cast rpc --rpc-url https://base-sepolia.rpc.ithaca.xyz health
+cast rpc --rpc-url https://rpc.ithaca.xyz health
 ```
 
 ```ts
