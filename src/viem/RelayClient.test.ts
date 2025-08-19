@@ -15,16 +15,16 @@ describe('fromPorto', () => {
         "chain": {
           "blockExplorers": {
             "default": {
-              "apiUrl": "https://api-sepolia.basescan.org/api",
+              "apiUrl": "https://api.basescan.org/api",
               "name": "Basescan",
-              "url": "https://sepolia.basescan.org",
+              "url": "https://basescan.org",
             },
           },
           "blockTime": 2000,
           "contracts": {
             "disputeGameFactory": {
-              "11155111": {
-                "address": "0xd6E6dBf4F7EA0ac412fD8b65ED297e64BB7a06E1",
+              "1": {
+                "address": "0x43edB88C4B80fDD2AdFF2412A7BebF9dF42cB40e",
               },
             },
             "gasPriceOracle": {
@@ -34,9 +34,9 @@ describe('fromPorto', () => {
               "address": "0x4200000000000000000000000000000000000015",
             },
             "l1StandardBridge": {
-              "11155111": {
-                "address": "0xfd0Bf71F60660E2f608ed56e1659C450eB113120",
-                "blockCreated": 4446677,
+              "1": {
+                "address": "0x3154Cf16ccdb4C6d922629664174b904d80F2C35",
+                "blockCreated": 17482143,
               },
             },
             "l2CrossDomainMessenger": {
@@ -46,8 +46,8 @@ describe('fromPorto', () => {
               "address": "0x4200000000000000000000000000000000000014",
             },
             "l2OutputOracle": {
-              "11155111": {
-                "address": "0x84457ca9D0163FbC4bbfe4Dfbb20ba46e48DF254",
+              "1": {
+                "address": "0x56315b90c40730925ec5485cf004d835058518A0",
               },
             },
             "l2StandardBridge": {
@@ -58,12 +58,12 @@ describe('fromPorto', () => {
             },
             "multicall3": {
               "address": "0xca11bde05977b3631167028862be2a173976ca11",
-              "blockCreated": 1059647,
+              "blockCreated": 5022,
             },
             "portal": {
-              "11155111": {
-                "address": "0x49f53e41452c74589e85ca1677426ba426459e85",
-                "blockCreated": 4446677,
+              "1": {
+                "address": "0x49048044D57e1C92A77f79988d21Fa8fAF74E97e",
+                "blockCreated": 17482143,
               },
             },
           },
@@ -85,26 +85,24 @@ describe('fromPorto', () => {
               "type": "transactionReceipt",
             },
           },
-          "id": 84532,
-          "name": "Base Sepolia",
+          "id": 8453,
+          "name": "Base",
           "nativeCurrency": {
             "decimals": 18,
-            "name": "Sepolia Ether",
+            "name": "Ether",
             "symbol": "ETH",
           },
-          "network": "base-sepolia",
           "rpcUrls": {
             "default": {
               "http": [
-                "https://sepolia.base.org",
+                "https://mainnet.base.org",
               ],
             },
           },
           "serializers": {
             "transaction": [Function],
           },
-          "sourceId": 11155111,
-          "testnet": true,
+          "sourceId": 1,
         },
         "extend": [Function],
         "key": "base",

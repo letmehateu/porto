@@ -25,16 +25,12 @@ const browser = typeof window !== 'undefined' && typeof document !== 'undefined'
 
 export const defaultConfig = {
   announceProvider: true,
-  chains: [Chains.baseSepolia, Chains.optimismSepolia],
-  mode: browser ? dialog() : relay(),
-  relay: http(relayUrls.stg.http),
+  chains: Chains.all,
+  mode: browser ? dialog({ host: hostUrls.prod }) : relay(),
+  relay: http(relayUrls.prod.http),
   storage: browser ? Storage.idb() : Storage.memory(),
   storageKey: 'porto.store',
-  transports: {
-    [Chains.baseSepolia.id]: http(),
-    [Chains.optimismSepolia.id]: http(),
-  },
-} as const satisfies Config
+} as const satisfies ExactPartial<Config>
 
 /**
  * Instantiates an Porto instance.
@@ -145,41 +141,6 @@ export function create(
     },
     provider,
   }
-}
-
-/**
- * Instantiates an Porto instance with future defaults (mainnet configuration).
- *
- * WARNING: This is not recommended for production use yet, and will become
- * stable in a future release.
- *
- * @example
- * ```ts twoslash
- * import { Porto } from 'porto'
- *
- * const porto = Porto.unstable_create()
- *
- * const blockNumber = await porto.provider.request({ method: 'eth_blockNumber' })
- * ```
- */
-export function unstable_create<
-  const chains extends readonly [Chains.Chain, ...Chains.Chain[]],
->(parameters?: ExactPartial<Config<chains>> | undefined): Porto<chains>
-export function unstable_create(
-  parameters: ExactPartial<Config> | undefined = {},
-): Porto {
-  return create({
-    chains: [Chains.base, Chains.arbitrum, Chains.optimism],
-    mode: browser ? dialog({ host: hostUrls.prod }) : relay(),
-    relay: http(relayUrls.prod.http),
-    storageKey: 'prod.porto.store',
-    transports: {
-      [Chains.arbitrum.id]: http(),
-      [Chains.base.id]: http(),
-      [Chains.optimism.id]: http(),
-    },
-    ...parameters,
-  })
 }
 
 export type Config<
