@@ -13,6 +13,37 @@ jobs:
     uses: ./.github/workflows/verify.yml
     secrets: inherit
 
+  extension:
+    name: Extension
+    uses: ./.github/workflows/extension.yml
+    secrets: inherit
+
+  extension-comment:
+    name: Comment PR with Extension Artifact
+    needs: [extension]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Comment PR
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          message: |
+            Built extension for [`${{ github.event.pull_request.head.sha }}`](${{ github.event.repository.html_url }}/commit/${{ github.event.pull_request.head.sha }}).
+
+            [Download](${needs.extension.outputs.artifact-url})
+
+            ### Instructions
+            1. Download the `extension.zip` asset from the link below
+            2. Unzip the downloaded file
+            3. Open your browser and navigate to extensions
+            4. Enable `Developer Mode` in the top right corner
+            5. Click `Load Unpacked` in the top left corner
+            6. Select the unzipped folder
+            7. Done!
+
   size:
     name: Size
     runs-on: ubuntu-latest
