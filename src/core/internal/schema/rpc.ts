@@ -142,6 +142,7 @@ export namespace eth_sendTransaction {
       Schema.Struct({
         capabilities: Schema.optional(
           Schema.Struct({
+            feeToken: Schema.optional(C.feeToken.Request),
             preCalls: Schema.optional(C.preCalls.Request),
           }),
         ),
