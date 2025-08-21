@@ -200,6 +200,7 @@ export function AddFunds(props: AddFunds.Props) {
                 address={address}
                 chainId={chain?.id}
                 minValue={defaultValue}
+                nativeTokenName={chain?.nativeCurrency?.symbol}
                 setView={setView}
                 tokenAddress={tokenAddress}
                 view={view}
@@ -317,11 +318,20 @@ function DepositCrypto(props: {
   address: Address.Address | undefined
   chainId: number | undefined
   minValue: string | undefined
+  nativeTokenName: string | undefined
   tokenAddress: Address.Address | undefined
   view: View
   setView: (view: View) => void
 }) {
-  const { address, chainId, minValue, tokenAddress, view, setView } = props
+  const {
+    address,
+    chainId,
+    minValue,
+    nativeTokenName,
+    tokenAddress,
+    view,
+    setView,
+  } = props
 
   const { address: account, connector } = useAccount()
   const disconnect = useDisconnect()
@@ -467,7 +477,10 @@ function DepositCrypto(props: {
                   className="flex h-9 w-full items-center justify-between rounded-th_medium bg-th_secondary px-2"
                   key={asset.address ?? asset.type}
                 >
-                  <div>{asset.metadata?.symbol ?? asset.type}</div>
+                  <div>
+                    {asset.metadata?.symbol ??
+                      (asset.type === 'native' ? nativeTokenName : asset.type)}
+                  </div>
                   <Ariakit.FormCheckbox
                     disabled={
                       tokenAddress
