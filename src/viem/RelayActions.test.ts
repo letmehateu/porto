@@ -377,7 +377,8 @@ describe('sendCalls', () => {
     ).toBe(100n)
   })
 
-  test('behavior: required funds', async () => {
+  // TODO: support interop on Anvil
+  test.runIf(!Anvil.enabled)('behavior: required funds', async () => {
     const key = Key.createHeadlessWebAuthnP256()
     const account = await TestActions.createAccount(client, {
       keys: [key],
