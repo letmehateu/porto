@@ -436,7 +436,7 @@ export declare namespace iframe {
  */
 export function popup(options: popup.Options = {}) {
   if (typeof window === 'undefined') return noop()
-  const { type = 'auto', size = popupDefaultSize } = options
+  const { type = 'auto', size = defaultSize } = options
   return from({
     name: 'popup',
     setup(parameters) {
@@ -448,7 +448,9 @@ export function popup(options: popup.Options = {}) {
       let popup: Window | null = null
 
       const resolvedType =
-        type === 'auto' ? (UserAgent.isMobile() ? 'page' : 'popup') : type
+        type === 'page' || (type === 'auto' && UserAgent.isMobile())
+          ? 'page'
+          : 'popup'
 
       function onBlur() {
         if (popup) handleBlur(store)
@@ -506,7 +508,7 @@ export function popup(options: popup.Options = {}) {
           themeController?._setup(messenger, false)
 
           messenger.send('__internal', {
-            mode: 'popup',
+            mode: resolvedType === 'page' ? 'page' : 'popup',
             referrer: getReferrer(),
             theme: themeController?.getTheme() ?? parameters.theme,
             type: 'init',
@@ -718,8 +720,7 @@ export function createThemeController(): ThemeController {
   return controller
 }
 
-export const iframeDefaultSize = { height: 282, width: 360 }
-export const popupDefaultSize = { height: 320, width: 360 }
+export const defaultSize = { height: 282, width: 360 }
 
 export function requiresConfirmation(
   request: RpcRequest.RpcRequest,
