@@ -996,6 +996,8 @@ export function dialog(parameters: dialog.Parameters = {}) {
         if (request.method !== 'wallet_switchEthereumChain')
           throw new Error('Cannot switch chain for method: ' + request.method)
 
+        if (!renderer.supportsHeadless) return
+
         const provider = getProvider(store)
         return await provider.request(request)
       },
