@@ -73,10 +73,9 @@ export function iframe(options: iframe.Options = {}) {
 
       const hostUrl = new URL(host)
 
-      const root = document.createElement('div')
+      const root = document.createElement('dialog')
       root.dataset.porto = ''
 
-      root.setAttribute('popover', 'manual')
       root.setAttribute('role', 'dialog')
       root.setAttribute('aria-closed', 'true')
       root.setAttribute('aria-label', 'Porto Wallet')
@@ -87,8 +86,10 @@ export function iframe(options: iframe.Options = {}) {
         border: '0',
         height: '100vh',
         inset: '0',
+        outline: '0',
         padding: '0',
         position: 'fixed',
+        top: '-10000px',
         width: '100vw',
       })
 
@@ -119,20 +120,6 @@ export function iframe(options: iframe.Options = {}) {
       })
 
       root.appendChild(iframe)
-
-      // move 1password notifications to the top layer
-      const mutObserver = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-          mutation.addedNodes.forEach((node) => {
-            if (
-              node.nodeName === 'COM-1PASSWORD-NOTIFICATION' &&
-              node.parentElement !== root
-            )
-              root.appendChild(node)
-          })
-        }
-      })
-      mutObserver.observe(document.body, { childList: true })
 
       const messenger = Messenger.bridge({
         from: Messenger.fromWindow(window, { targetOrigin: hostUrl.origin }),
@@ -217,29 +204,6 @@ export function iframe(options: iframe.Options = {}) {
 
       let bodyStyle: CSSStyleDeclaration | null = null
 
-      // setting inert on body would also set it on the root element, so we
-      // need to set it on all the html & body children (except root) instead.
-      const pageInertMap = new WeakMap<HTMLElement, boolean>()
-      const togglePageInert = (inert: boolean) => {
-        document.querySelectorAll('body > *, html > *').forEach((elt) => {
-          if (
-            elt === root ||
-            elt === document.body ||
-            elt === document.head ||
-            !(elt instanceof HTMLElement)
-          )
-            return
-
-          if (inert) {
-            pageInertMap.set(elt, elt.inert)
-            elt.inert = true
-          } else if (pageInertMap.has(elt)) {
-            elt.inert = pageInertMap.get(elt) ?? false
-            pageInertMap.delete(elt)
-          }
-        })
-      }
-
       // store the opening element to restore the focus
       let opener: HTMLElement | null = null
 
@@ -247,6 +211,23 @@ export function iframe(options: iframe.Options = {}) {
       const onEscape = (event: KeyboardEvent) => {
         if (event.key === 'Escape') handleBlur(store)
       }
+
+      // 1password extension adds `inert` attribute to `dialog` and inserts
+      // itself (`<com-1password-notification />`) there rendering itself unusable:
+      // watch for `inert` on `dialog` and remove it
+      const inertObserver = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.type !== 'attributes') continue
+          const name = mutation.attributeName
+          if (!name) continue
+          if (name !== 'inert') continue
+          root.removeAttribute(name)
+        }
+      })
+      inertObserver.observe(root, {
+        attributeOldValue: true,
+        attributes: true,
+      })
 
       // dialog/page interactivity (no visibility change)
       let dialogActive = false
@@ -256,7 +237,6 @@ export function iframe(options: iframe.Options = {}) {
 
         root.removeEventListener('click', onBlur)
         document.removeEventListener('keydown', onEscape)
-        togglePageInert(false)
         root.style.pointerEvents = 'none'
         opener?.focus()
         opener = null
@@ -271,10 +251,7 @@ export function iframe(options: iframe.Options = {}) {
 
         root.addEventListener('click', onBlur)
         document.addEventListener('keydown', onEscape)
-        if (document.activeElement instanceof HTMLElement)
-          opener = document.activeElement
         iframe.focus()
-        togglePageInert(true)
         root.style.pointerEvents = 'auto'
 
         bodyStyle = Object.assign({}, document.body.style)
@@ -287,9 +264,13 @@ export function iframe(options: iframe.Options = {}) {
         if (visible) return
         visible = true
         cancelForceHideDelay()
+
+        if (document.activeElement instanceof HTMLElement)
+          opener = document.activeElement
+
         root.removeAttribute('hidden')
         root.removeAttribute('aria-closed')
-        root.showPopover()
+        root.showModal()
       }
       const hideDialog = () => {
         if (!visible) return
@@ -297,7 +278,18 @@ export function iframe(options: iframe.Options = {}) {
         cancelForceHideDelay()
         root.setAttribute('hidden', 'true')
         root.setAttribute('aria-closed', 'true')
-        root.hidePopover()
+        root.close()
+
+        // 1password extension sometimes adds `inert` attribute to `dialog`
+        // siblings and does not clean up remove when `dialog` closes
+        // (after `<com-1password-notification />` closes)
+        for (const sibling of root.parentNode
+          ? Array.from(root.parentNode.children)
+          : []) {
+          if (sibling === root) continue
+          if (!sibling.hasAttribute('inert')) continue
+          sibling.removeAttribute('inert')
+        }
       }
 
       // let the iframe a second to send the done:close
@@ -340,8 +332,8 @@ export function iframe(options: iframe.Options = {}) {
 
           fallback.destroy()
           messenger.destroy()
-          mutObserver.disconnect()
           root.remove()
+          inertObserver.disconnect()
 
           drawerModeQuery.removeEventListener('change', onDrawerModeChange)
         },
