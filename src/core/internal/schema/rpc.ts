@@ -10,6 +10,14 @@ const KeyWithCredentialId = Schema.extend(
   Key.Base.pick('id', 'publicKey', 'type'),
   Schema.Struct({
     credentialId: Schema.optional(Schema.String),
+    privateKey: Schema.optional(
+      Schema.Struct({
+        credential: Schema.Struct({
+          id: Schema.optional(Schema.String),
+        }),
+        rpId: Schema.optional(Schema.String),
+      }),
+    ),
   }),
 )
 
