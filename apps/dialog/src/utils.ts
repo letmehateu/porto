@@ -8,7 +8,8 @@ export namespace PriceFormatter {
    * @returns The formatted string.
    */
   export function format(value: number | bigint) {
-    if (value < 0.01) return `<${numberIntl.format('0.01')}`
+    if (abs(value) < 0.01)
+      return `${value < 0 ? '-' : ''}<${numberIntl.format('0.01')}`
     return numberIntl.format(value)
   }
 
@@ -17,6 +18,11 @@ export namespace PriceFormatter {
     currency: 'USD',
     style: 'currency',
   })
+
+  function abs(value: bigint | number): bigint | number {
+    if (typeof value === 'number') return Math.abs(value)
+    return value < 0n ? -value : value
+  }
 }
 
 export namespace StringFormatter {
