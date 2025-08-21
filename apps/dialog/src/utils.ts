@@ -8,6 +8,7 @@ export namespace PriceFormatter {
    * @returns The formatted string.
    */
   export function format(value: number | bigint) {
+    if (value < 0.01) return `<${numberIntl.format('0.01')}`
     return numberIntl.format(value)
   }
 
