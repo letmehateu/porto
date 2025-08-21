@@ -377,7 +377,7 @@ describe('sendCalls', () => {
     ).toBe(100n)
   })
 
-  test.only('behavior: required funds', async () => {
+  test('behavior: required funds', async () => {
     const key = Key.createHeadlessWebAuthnP256()
     const account = await TestActions.createAccount(client, {
       keys: [key],
