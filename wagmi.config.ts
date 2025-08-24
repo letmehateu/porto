@@ -11,6 +11,7 @@ import {
   base,
   baseSepolia,
   optimismSepolia,
+  sepolia,
 } from './src/core/Chains.js'
 import * as anvilAddresses from './test/src/_generated/addresses.js'
 
@@ -19,10 +20,14 @@ const client = createClient({
 })
 
 const capabilities = await getCapabilities(client)
+if (!capabilities) throw new Error('No capabilities found')
 
-const getTokenAddress = (chainId: number, tokenUid: 'exp1' | 'exp2') => {
+const getTokenAddress = (
+  chainId: keyof typeof capabilities,
+  tokenUid: 'exp1' | 'exp2',
+) => {
   const token = capabilities[chainId].fees.tokens.find(
-    (t) => t.uid === tokenUid,
+    (t: { uid: string }) => t.uid === tokenUid,
   )
   if (!token)
     throw new Error(`Token ${tokenUid} not found for chain ${chainId}`)
@@ -34,7 +39,7 @@ const address = {
     [anvil3.id]: anvilAddresses.exp1Address,
     [anvil.id]: anvilAddresses.exp1Address,
     [anvil2.id]: anvilAddresses.exp1Address,
-    [base.id]: '0x074C9c3273F31651a9dae896C1A1d68E868b6998',
+    [sepolia.id]: getTokenAddress(sepolia.id, 'exp1'),
     [baseSepolia.id]: getTokenAddress(baseSepolia.id, 'exp1'),
     [optimismSepolia.id]: getTokenAddress(optimismSepolia.id, 'exp1'),
     [arbitrumSepolia.id]: getTokenAddress(arbitrumSepolia.id, 'exp1'),
@@ -43,7 +48,7 @@ const address = {
     [anvil3.id]: anvilAddresses.exp2Address,
     [anvil.id]: anvilAddresses.exp2Address,
     [anvil2.id]: anvilAddresses.exp2Address,
-    [base.id]: '0xFcc74F42621D03Fd234d5f40931D8B82923E4D29',
+    [sepolia.id]: getTokenAddress(sepolia.id, 'exp2'),
     [baseSepolia.id]: getTokenAddress(baseSepolia.id, 'exp2'),
     [optimismSepolia.id]: getTokenAddress(optimismSepolia.id, 'exp2'),
     [arbitrumSepolia.id]: getTokenAddress(arbitrumSepolia.id, 'exp2'),
