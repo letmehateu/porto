@@ -80,7 +80,7 @@ const offInitialized = Events.onInitialized(porto, (payload, event) => {
 
 const offDialogRequest = Events.onDialogRequest(
   porto,
-  ({ account, request, requireChainSync, requireUpdatedAccount }) => {
+  async ({ account, request, requireChainSync, requireUpdatedAccount }) => {
     const chainId = porto._internal.store.getState().chainIds[0]
     const connectedAccount = porto._internal.store.getState().accounts[0]
     const requireAccountSync =
@@ -89,19 +89,24 @@ const offDialogRequest = Events.onDialogRequest(
     // Clear errors when the request is null (i.e. when the dialog is closed).
     if (!request) Dialog.store.setState({ error: null })
 
+    if (requireAccountSync || requireChainSync)
+      await Router.router.navigate({
+        to: '/dialog/pending',
+      })
+
     if (requireAccountSync)
-      Actions.connect(Wagmi.config, {
+      await Actions.connect(Wagmi.config, {
         connector: getConnectors(Wagmi.config)[0]!,
         force: true,
         selectAccount: account,
       })
 
     if (requireChainSync)
-      switchChain(Wagmi.config, {
+      await switchChain(Wagmi.config, {
         chainId,
       })
 
-    Router.router.navigate({
+    await Router.router.navigate({
       search: (search) => {
         return {
           ...search,
