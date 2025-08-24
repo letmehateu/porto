@@ -437,7 +437,6 @@ function AddFunds() {
               method: 'wallet_addFunds',
               params: [
                 {
-                  token,
                   value: Env.get() === 'prod' ? '30' : '100',
                 },
               ],

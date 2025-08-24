@@ -9,7 +9,7 @@ import {
   useQuery,
 } from '@tanstack/react-query'
 import { Cuer } from 'cuer'
-import { type Address, Hex, Value } from 'ox'
+import { Address, Hex, Value } from 'ox'
 import { Hooks as RemoteHooks } from 'porto/remote'
 import { RelayActions } from 'porto/viem'
 import { Hooks } from 'porto/wagmi'
@@ -33,7 +33,6 @@ import LucideCopy from '~icons/lucide/copy'
 import LucideCopyCheck from '~icons/lucide/copy-check'
 import LucideOctagonAlert from '~icons/lucide/octagon-alert'
 import TriangleAlertIcon from '~icons/lucide/triangle-alert'
-import { ValueFormatter } from '../../utils'
 
 const presetAmounts = ['30', '50', '100', '250'] as const
 const MAX_AMOUNT = 500
@@ -63,7 +62,15 @@ export function AddFunds(props: AddFunds.Props) {
   const { data: feeTokens } = FeeTokens.fetch.useQuery({
     addressOrSymbol: tokenAddress,
   })
-  const feeToken = feeTokens?.[0]
+  const feeToken = React.useMemo(
+    () =>
+      tokenAddress
+        ? feeTokens?.find((token) =>
+            Address.isEqual(token.address, tokenAddress),
+          )
+        : undefined,
+    [feeTokens, tokenAddress],
+  )
 
   const { data: assets, refetch: refetchAssets } = Hooks.useAssets({
     account: account?.address,
@@ -247,9 +254,8 @@ function Faucet(props: {
 
       if (!address) throw new Error('address is required')
       if (!chainId) throw new Error('chainId is required')
-      if (!decimals) throw new Error('decimals is required')
 
-      const value = Value.from(amount, decimals)
+      const value = Value.from(amount, decimals ?? 18)
 
       const data = await RelayActions.addFaucetFunds(client, {
         address,
@@ -546,11 +552,7 @@ function DepositCrypto(props: {
       )
     return (
       <div className="flex flex-col gap-3">
-        <QRCard
-          address={address ?? ''}
-          feeToken={feeToken}
-          minValue={minValue}
-        />
+        <QRCard address={address ?? ''} feeToken={feeToken} />
         <Button
           onClick={() => {
             disconnect.disconnect()
@@ -595,7 +597,7 @@ function DepositCrypto(props: {
         ))}
       </div>
 
-      <QRCard address={address ?? ''} feeToken={feeToken} minValue={minValue} />
+      <QRCard address={address ?? ''} feeToken={feeToken} />
     </div>
   )
 }
@@ -603,9 +605,8 @@ function DepositCrypto(props: {
 function QRCard(props: {
   address: string
   feeToken: FeeTokens.FeeToken | undefined
-  minValue: string | undefined
 }) {
-  const { address, feeToken, minValue } = props
+  const { address, feeToken } = props
   const [isCopied, copyToClipboard] = useCopyToClipboard({ timeout: 2_000 })
   return (
     <div className="flex items-center justify-between rounded-th_medium bg-th_secondary p-2">
@@ -618,9 +619,7 @@ function QRCard(props: {
         </div>
         <div className="flex flex-col gap-0.5">
           <div className="font-medium text-[13px]">
-            Send{' '}
-            {minValue ? `${ValueFormatter.format(Number(minValue))} ` : ' '}
-            {feeToken?.symbol}
+            Send {feeToken?.symbol ?? 'directly'}
           </div>
           <div className="min-w-[21ch] max-w-[21ch] text-pretty break-all font-mono font-normal text-[10px] text-th_base-secondary leading-[14px]">
             {address}

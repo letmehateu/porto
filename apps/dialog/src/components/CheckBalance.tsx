@@ -75,7 +75,9 @@ export function CheckBalance(props: CheckBalance.Props) {
       Address.isEqual(token.address, deficitToken.address),
     )
     if (!feeToken) return undefined
-    return Value.format(deficitToken.value, feeToken.decimals)
+    // Add 20% to the deficit to account for fee fluctuations.
+    const value = deficitToken.value * (120n / 100n)
+    return Value.format(value, feeToken.decimals)
   }, [deficitToken, feeTokens.data])
 
   if (step === 'success') return children
