@@ -11,7 +11,7 @@ pnpx gitpick ithacaxyz/porto/tree/main/examples/sponsoring-vite porto-sponsoring
 Run the following command to onboard a new Porto Merchant (Sponsor) Account.
 
 ```sh
-pnpx porto onboard -a
+pnpx porto onboard --admin-key --testnet
 ```
 
 Place the address and private key of the merchant account into the `.dev.vars` file.
