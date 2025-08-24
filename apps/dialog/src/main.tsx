@@ -99,12 +99,12 @@ const offDialogRequest = Events.onDialogRequest(
         connector: getConnectors(Wagmi.config)[0]!,
         force: true,
         selectAccount: account,
-      })
+      }).catch(() => {})
 
     if (requireChainSync)
       await switchChain(Wagmi.config, {
         chainId,
-      })
+      }).catch(() => {})
 
     await Router.router.navigate({
       search: (search) => {
