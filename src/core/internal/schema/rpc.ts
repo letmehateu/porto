@@ -110,7 +110,7 @@ export namespace eth_accounts {
 export namespace eth_chainId {
   export const Request = Schema.Struct({
     method: Schema.Literal('eth_chainId'),
-    params: Schema.optional(Schema.Undefined),
+    params: Schema.optional(Schema.Unknown),
   }).annotations({
     identifier: 'Rpc.eth_chainId.Request',
   })
@@ -124,7 +124,7 @@ export namespace eth_chainId {
 export namespace eth_requestAccounts {
   export const Request = Schema.Struct({
     method: Schema.Literal('eth_requestAccounts'),
-    params: Schema.optional(Schema.Undefined),
+    params: Schema.optional(Schema.Unknown),
   }).annotations({
     identifier: 'Rpc.eth_requestAccounts.Request',
   })
@@ -564,7 +564,7 @@ export namespace wallet_connect {
 export namespace wallet_disconnect {
   export const Request = Schema.Struct({
     method: Schema.Literal('wallet_disconnect'),
-    params: Schema.optional(Schema.Undefined),
+    params: Schema.optional(Schema.Unknown),
   }).annotations({
     identifier: 'Rpc.wallet_disconnect.Request',
   })

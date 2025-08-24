@@ -46,6 +46,7 @@ export function from<
     return RelayClient.fromPorto({ _internal: parameters }, { chainId })
   }
 
+  const lock = new Map<string, boolean>()
   const preparedAccounts_internal: Account.Account[] = []
 
   const emitter = ox_Provider.createEmitter()
@@ -154,6 +155,13 @@ export function from<
         }
 
         case 'eth_requestAccounts': {
+          // Some apps will call `eth_requestAccounts` multiple times in a short period of time.
+          // Return the cached accounts if the request is locked.
+          if (state.accounts.length > 0 && lock.get('eth_requestAccounts'))
+            return state.accounts.map(
+              (account) => account.address,
+            ) satisfies typeof Rpc.eth_requestAccounts.Response.Encoded
+
           const client = getClient()
 
           const { accounts } = await getMode().actions.loadAccounts({
@@ -170,6 +178,9 @@ export function from<
           emitter.emit('connect', {
             chainId: Hex.fromNumber(client.chain.id),
           })
+
+          lock.set('eth_requestAccounts', true)
+          setTimeout(() => lock.delete('eth_requestAccounts'), 1_000)
 
           return accounts.map(
             (account) => account.address,
