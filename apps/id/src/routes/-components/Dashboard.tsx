@@ -5,23 +5,25 @@ import { Link } from '@tanstack/react-router'
 import { Cuer } from 'cuer'
 import { cx } from 'cva'
 import { Address, Hex, Value } from 'ox'
+import { Chains } from 'porto'
+import { base, baseSepolia } from 'porto/core/Chains'
 import { Hooks } from 'porto/wagmi'
 import * as React from 'react'
 import { toast } from 'sonner'
 import { encodeFunctionData, erc20Abi, formatEther, zeroAddress } from 'viem'
 import {
   useAccount,
-  useChainId,
+  useCapabilities,
   useDisconnect,
   useSendCalls,
+  useSwitchChain,
   useWaitForCallsStatus,
-  useWatchBlockNumber,
 } from 'wagmi'
 import { ShowMore } from '~/components/ShowMore'
 import { TokenSymbol } from '~/components/TokenSymbol'
 import { TruncatedAddress } from '~/components/TruncatedAddress'
 import { useClickOutside } from '~/hooks/useClickOutside'
-import { type ChainId, defaultAssets, ethAsset } from '~/lib/Constants'
+import type { ChainId } from '~/lib/Constants'
 import { getChainConfig } from '~/lib/Wagmi'
 import { DateFormatter, ValueFormatter } from '~/utils'
 import LucideBadgeCheck from '~icons/lucide/badge-check'
@@ -39,6 +41,28 @@ import NullIcon from '~icons/material-symbols/do-not-disturb-on-outline'
 import WorldIcon from '~icons/tabler/world'
 import { Layout } from './Layout'
 
+type Asset = {
+  address: Address.Address
+  chainId: number
+  balance: bigint
+} & (
+  | {
+      metadata: null
+      type: 'native'
+      feeToken: boolean
+    }
+  | {
+      type: 'erc20'
+      metadata: {
+        name?: string
+        symbol?: string
+        decimals: number
+        logo?: string | undefined
+      }
+      feeToken: boolean
+    }
+)
+
 export function Dashboard() {
   const [, copyToClipboard] = useCopyToClipboard({ timeout: 2_000 })
 
@@ -46,75 +70,62 @@ export function Dashboard() {
   const disconnect = useDisconnect()
   const permissions = Hooks.usePermissions()
 
+  const capabilities = useCapabilities({
+    query: { enabled: account.status === 'connected' },
+  })
+
   const assets = Hooks.useAssets({
     query: {
       enabled: account.status === 'connected',
+      select: (data) => {
+        const formattedAssets: Array<Asset> = []
+        for (const chainId in data) {
+          const chainAssets = data[chainId]
+          if (chainId === '0' || !chainAssets) continue
+
+          const feeTokens =
+            capabilities?.data?.[Number(chainId)]?.feeToken.tokens
+          for (const asset of chainAssets) {
+            const isNative = asset.type === 'native'
+
+            const address = isNative
+              ? zeroAddress
+              : (asset.address as Address.Address)
+            if (!address || asset.balance === 0n) continue
+            formattedAssets.push({
+              address,
+              balance: asset.balance,
+              chainId: Number(chainId),
+              feeToken: isNative
+                ? true
+                : (feeTokens?.some((token) => token.address === address) ??
+                  false),
+              metadata: {
+                ...asset.metadata,
+                decimals: isNative ? 18 : asset.metadata!.decimals,
+                name: isNative ? 'Ether' : asset.metadata!.name,
+                symbol: isNative ? 'ETH' : asset.metadata!.symbol,
+              },
+              type: asset.type as any,
+            })
+          }
+        }
+
+        return formattedAssets.sort((a, b) => (a.balance > b.balance ? -1 : 1))
+      },
     },
   })
 
-  const serializedAssets = React.useMemo(() => {
-    if (!assets.data) return []
-    const serialized: {
-      address: Address.Address
-      balance: bigint
-      chainId: number
-      logo: string
-      name: string
-      price: number
-      symbol: string
-      decimals: number
-    }[] = []
-    for (const [chainId, balances] of Object.entries(assets.data)) {
-      const assets = defaultAssets[chainId as unknown as ChainId]
-      for (const balance of balances) {
-        const asset =
-          balance.type === 'native'
-            ? ethAsset
-            : assets?.find(
-                (asset) =>
-                  asset?.symbol?.toLowerCase() ===
-                  balance.metadata?.symbol?.toLowerCase(),
-              )
-
-        serialized.push({
-          address:
-            asset?.address || balance.address?.startsWith('0x')
-              ? (balance.address as Address.Address)
-              : zeroAddress,
-          balance: balance.balance,
-          chainId: Number(chainId),
-          decimals: asset?.decimals || balance.metadata?.decimals || 0,
-          logo: asset?.logo || '',
-          name: asset?.name || balance.metadata?.name || '',
-          price: 0,
-          symbol: asset?.symbol || balance.metadata?.symbol || '',
-        })
-      }
-    }
-    return serialized.sort((a, b) => b.chainId - a.chainId)
-  }, [assets.data])
-
-  useWatchBlockNumber({
-    enabled: account.status === 'connected',
-    onBlockNumber: async (_blockNumber) => {
-      await Promise.all([
-        permissions.refetch().catch((error) => console.error(error)),
-      ])
-    },
-    pollingInterval: 1_000,
-  })
+  const { switchChainAsync } = useSwitchChain()
 
   const revokePermissions = Hooks.useRevokePermissions()
 
   const admins = Hooks.useAdmins({
     query: {
-      enabled: account.status !== 'connected',
-      refetchInterval: 5_000,
+      enabled: account.status === 'connected',
       select: (data) => ({
-        address: data.address,
-        keys: data.keys.filter((key) =>
-          ['address', 'secp256k1'].includes(key.type),
-        ),
+        ...data,
+        keys: data.keys.filter((key) => key.type === 'address'),
       }),
     },
   })
@@ -183,8 +194,6 @@ export function Dashboard() {
       },
     },
   })
-
-  const chainId = useChainId()
 
   return (
     <>
@@ -321,9 +330,33 @@ export function Dashboard() {
         right={
           <div className="flex gap-2">
             <Button
-              onClick={() =>
-                addFunds.mutate({ address: account.address, chainId })
-              }
+              onClick={async (event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                // if url has testnet search param
+                const urlHasTestnet = window.location.search.includes('testnet')
+                if (!urlHasTestnet) {
+                  addFunds.mutate({
+                    address: account.address,
+                  })
+                  return
+                }
+                await switchChainAsync({
+                  chainId: Chains.baseSepolia.id,
+                }).catch()
+                if (!capabilities.data) return
+                const exp1 = capabilities.data?.[
+                  Chains.baseSepolia.id
+                ]?.feeToken?.tokens?.find((t) => t.uid === 'exp1')
+                if (!exp1) return
+                addFunds.mutate({
+                  address: account.address,
+                  chainId: Chains.baseSepolia.id,
+                  token: exp1?.address as Address.Address,
+                  // @ts-expect-error TODO: fix type
+                  tokenAddress: exp1?.address as Address.Address,
+                })
+              }}
               size="small"
               variant="accent"
             >
@@ -358,7 +391,7 @@ export function Dashboard() {
         <div className="flex flex-1 flex-col justify-between">
           <div className="font-[500] text-[13px] text-gray10">Your account</div>
           <div>
-            <div className="font-[500] text-[24px] tracking-[-2.8%]">${0}</div>
+            {/* <div className="font-[500] text-[24px] tracking-[-2.8%]">${0}</div> */}
           </div>
         </div>
         <Ariakit.Button
@@ -387,7 +420,10 @@ export function Dashboard() {
       <hr className="border-gray5" />
       <div className="h-4" />
 
-      <details className="group" open={serializedAssets.length > 0}>
+      <details
+        className="group"
+        open={!!assets.data?.length && assets.data.length > 0}
+      >
         <summary className='relative cursor-default list-none pr-1 font-semibold text-lg after:absolute after:right-1 after:font-normal after:text-gray10 after:text-sm after:content-["[+]"] group-open:after:content-["[–]"]'>
           <span>Assets</span>
         </summary>
@@ -406,26 +442,27 @@ export function Dashboard() {
             { align: 'right', header: '', key: 'action', width: 'w-[20%]' },
             { align: 'right', header: '', key: 'action', width: 'w-[20%]' },
           ]}
-          data={
-            serializedAssets.some((a) => a.balance > 0n)
-              ? serializedAssets
-              : undefined
+          data={assets.data}
+          emptyMessage={
+            assets.status === 'pending'
+              ? ''
+              : 'No balances available for this account'
           }
-          emptyMessage="No balances available for this account"
           renderRow={(asset) => (
+            // @ts-expect-error
             <AssetRow
-              address={asset.address!}
+              address={asset.address}
+              balance={asset.balance}
               chainId={asset.chainId}
-              decimals={asset.decimals}
-              key={asset.symbol}
-              logo={asset.logo}
-              name={asset.name}
-              price={asset.price}
-              symbol={asset.symbol}
+              feeToken={asset.feeToken}
+              key={asset.metadata?.symbol}
+              metadata={asset.metadata}
+              price={1}
+              type={asset.type}
               value={asset.balance}
             />
           )}
-          showMoreText={serializedAssets.length > 0 ? 'more assets' : ''}
+          showMoreText={assets.data ? 'more assets' : ''}
         />
       </details>
 
@@ -540,6 +577,7 @@ export function Dashboard() {
                     onClick={() => {
                       revokePermissions.mutate({
                         address: account.address,
+                        chainId: permission.chainId as never,
                         id: permission.id,
                       })
                     }}
@@ -633,8 +671,13 @@ export function Dashboard() {
                         className="size-8 rounded-full p-1 text-gray11 hover:bg-red-100 hover:text-red-500"
                         onClick={() => {
                           if (!id || !address) return
+                          const chainId =
+                            import.meta.env.VITE_VERCEL_ENV === 'production'
+                              ? base.id
+                              : baseSepolia.id
                           revokeAdmin.mutate({
                             address: account.address,
+                            chainId,
                             id: key.id,
                           })
                         }}
@@ -662,9 +705,9 @@ export function Dashboard() {
 }
 
 function PaginatedTable<T>({
+  columns,
   data,
   emptyMessage,
-  columns,
   renderRow,
   showMoreText,
   initialCount = 5,
@@ -738,24 +781,27 @@ function PaginatedTable<T>({
   )
 }
 
-function AssetRow(props: {
-  address: Address.Address
-  decimals: number
-  name: string
-  symbol: string
-  value: bigint
-  logo?: string | undefined
-  price?: number | undefined
-  chainId: number
-}) {
-  const { address, decimals, logo, name, symbol, value, price, chainId } = props
+function AssetRow(
+  props: Asset & { price?: number | undefined; value: bigint },
+) {
+  const {
+    address,
+    value,
+    price,
+    chainId,
+    feeToken: isFeeToken,
+    metadata,
+  } = props
+
   const [viewState, setViewState] = React.useState<'send' | 'default'>(
     'default',
   )
 
+  const { switchChain, status: _switchChainStatus } = useSwitchChain()
+
   const formattedBalance = React.useMemo(
-    () => ValueFormatter.format(value, decimals),
-    [value, decimals],
+    () => ValueFormatter.format(value, metadata?.decimals),
+    [value, metadata?.decimals],
   )
 
   // total value of the asset
@@ -795,7 +841,6 @@ function AssetRow(props: {
         sendForm.setState('submitSucceed', 0)
       },
       onSuccess: (_data) => {
-        // refetchSwapAssets()
         sendForm.setState('submitSucceed', (count) => +count + 1)
         sendForm.setState('submitFailed', 0)
       },
@@ -805,6 +850,93 @@ function AssetRow(props: {
   const callStatus = useWaitForCallsStatus({
     id: sendCalls.data?.id,
   })
+
+  const account = useAccount()
+
+  const sendForm = Ariakit.useFormStore({
+    defaultValues: {
+      sendAmount: '',
+      sendAsset: address,
+      sendRecipient: '',
+    },
+  })
+
+  const sendFormState = Ariakit.useStoreState(sendForm)
+
+  sendForm.useValidate(async (state) => {
+    if (Number(state.values.sendAmount) > Number(formattedBalance)) {
+      sendForm.setError('sendAmount', 'Amount is too high')
+    }
+  })
+
+  sendForm.useSubmit(() => {
+    if (Number(sendFormState.values.sendAmount) >= Number(formattedBalance)) {
+      // if amount is greater than balance or equal balance, reject
+      toast.error('Amount is too high')
+      return
+    }
+
+    if (account.chain?.id !== props.chainId)
+      switchChain({ chainId: props.chainId as never })
+
+    if (!Address.validate(sendFormState.values.sendRecipient)) {
+      toast.error('Invalid recipient address')
+      return
+    }
+
+    if (address === zeroAddress) {
+      // ETH should have `to` as the recipient, `value` as the amount, and `data` as the empty string
+      // ERC20 should have `to` as the token address, `data` as the encoded function data, and `value` as the empty string
+
+      sendCalls.sendCalls({
+        calls: [
+          {
+            to: sendFormState.values.sendRecipient,
+            value: Value.from(
+              sendFormState.values.sendAmount,
+              metadata?.decimals,
+            ),
+          },
+        ],
+        capabilities: {
+          feeToken: isFeeToken ? address : zeroAddress,
+        },
+        chainId: props.chainId as never,
+      })
+    } else
+      sendCalls.sendCalls({
+        calls: [
+          {
+            data: encodeFunctionData({
+              abi: erc20Abi,
+              args: [
+                sendFormState.values.sendRecipient,
+                Value.from(sendFormState.values.sendAmount, metadata?.decimals),
+              ],
+              functionName: 'transfer',
+            }),
+            to: address,
+          },
+        ],
+        capabilities: {
+          feeToken: isFeeToken ? address : zeroAddress,
+        },
+        chainId: props.chainId as never,
+      })
+  })
+
+  const ref = React.useRef<HTMLTableCellElement | null>(null)
+  useClickOutside([ref], () => setViewState('default'))
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: _
+  React.useEffect(() => {
+    if (callStatus.data?.id) {
+      const [receipt] = callStatus.data?.receipts ?? []
+      const hash = receipt?.transactionHash
+      if (!hash) return
+      toast.info('Transaction completed')
+    }
+  }, [callStatus.data?.receipts])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: _
   React.useEffect(() => {
@@ -816,7 +948,7 @@ function AssetRow(props: {
         (t) => (
           <Toast
             className={t}
-            description={`You successfully sent ${sendFormState.values.sendAmount} ${symbol}`}
+            description={`You successfully sent ${sendFormState.values.sendAmount} ${metadata?.symbol}`}
             kind="success"
             title="Transaction completed"
           />
@@ -825,89 +957,36 @@ function AssetRow(props: {
         { duration: 4_500 },
       )
     }
+    if (!callStatus.data?.id) return
+
+    toast.info(`Transaction status: ${callStatus.data.status}`)
   }, [callStatus.data?.id])
 
-  const sendForm = Ariakit.useFormStore({
-    defaultValues: {
-      sendAmount: '',
-      sendAsset: address,
-      sendRecipient: '',
-    },
-  })
-  const sendFormState = Ariakit.useStoreState(sendForm)
+  if (props.value === 0n && !import.meta.env.DEV) return null
 
-  sendForm.useValidate(async (state) => {
-    if (Number(state.values.sendAmount) > Number(formattedBalance)) {
-      sendForm.setError('sendAmount', 'Amount is too high')
-    }
-  })
-
-  async function submitForm(
-    event: React.MouseEvent<HTMLButtonElement, MouseEvent>,
-  ) {
-    event.preventDefault()
-
-    if (
-      !Address.validate(sendFormState.values.sendRecipient) ||
-      !sendFormState.values.sendAmount
-    )
-      return
-
-    // ETH should have `to` as the recipient, `value` as the amount, and `data` as the empty string
-    // ERC20 should have `to` as the token address, `data` as the encoded function data, and `value` as the empty string
-
-    if (address === zeroAddress) {
-      sendCalls.sendCalls({
-        calls: [
-          {
-            to: sendFormState.values.sendRecipient,
-            value: Value.from(sendFormState.values.sendAmount, decimals),
-          },
-        ],
-        capabilities: {
-          feeToken: zeroAddress,
-        },
-      })
-    } else
-      sendCalls.sendCalls({
-        calls: [
-          {
-            data: encodeFunctionData({
-              abi: erc20Abi,
-              args: [
-                sendFormState.values.sendRecipient,
-                Value.from(sendFormState.values.sendAmount, decimals),
-              ],
-              functionName: 'transfer',
-            }),
-            to: address,
-          },
-        ],
-      })
-  }
-
-  const ref = React.useRef<HTMLTableCellElement | null>(null)
-  useClickOutside([ref], () => setViewState('default'))
-
-  if (value === 0n && !import.meta.env.DEV) return null
-
-  const icon = import.meta.env.DEV ? (
-    <img
-      alt={name}
-      className="size-5 sm:size-6"
-      src={`/icons/${symbol.toLowerCase()}.svg`}
-    />
-  ) : null
   return (
     <tr className="font-normal sm:text-sm">
       {viewState === 'default' ? (
         <>
-          <td className="w-[17.5%]">
-            <span className="font-medium text-sm sm:text-md">{chainId}</span>
+          <td className="w-[10.5%] text-center">
+            <span className="text-right font-medium text-sm sm:text-md">
+              {chainId}
+            </span>
           </td>
           <td className="w-[80%]">
             <div className="flex items-center gap-x-3 py-2">
-              <span className="font-medium text-sm sm:text-md">{icon}</span>
+              <img
+                alt="asset icon"
+                className="ml-3 size-6"
+                onError={(event) => [
+                  (event.currentTarget.src = '/icons/fallback.svg'),
+                  (event.currentTarget.onerror = null),
+                ]}
+                src={`/icons/${metadata?.symbol?.toLowerCase()}.svg`}
+              />
+              <span className="font-medium text-sm sm:text-md">
+                {metadata?.name}
+              </span>
             </div>
           </td>
           <td className="w-[20%] text-right text-md">{formattedBalance}</td>
@@ -916,7 +995,7 @@ function AssetRow(props: {
           </td>
           <td className="w-[20%] pr-1.5 pl-3 text-left text-sm">
             <span className="rounded-2xl bg-gray3 px-2 py-1 font-[500] text-gray10 text-xs">
-              {symbol}
+              {metadata?.symbol}
             </span>
           </td>
           <td className="text-right text-sm">
@@ -937,7 +1016,15 @@ function AssetRow(props: {
             store={sendForm}
           >
             <div className="flex w-[75px] flex-row items-center gap-x-2 border-gray6 border-r pr-1.5 pl-1 sm:w-[85px] sm:pl-2">
-              <img alt="asset icon" className="size-8" src={logo} />
+              <img
+                alt="asset icon"
+                className="size-8"
+                onError={(event) => {
+                  event.currentTarget.src = '/icons/fallback.svg'
+                  event.currentTarget.onerror = null
+                }}
+                src={`/icons/${metadata?.symbol?.toLowerCase()}.svg`}
+              />
             </div>
             <div className="ml-3 flex w-full flex-row gap-y-1 border-gray7 border-r pr-3">
               <div className="flex w-full flex-col gap-y-1">
@@ -1039,12 +1126,6 @@ function AssetRow(props: {
                   inputMode="decimal"
                   max={formattedBalance}
                   name={sendForm.names.sendAmount}
-                  onInput={(event) => {
-                    sendForm.setValue(
-                      sendForm.names.sendAmount,
-                      event.currentTarget.value,
-                    )
-                  }}
                   placeholder="0.00"
                   required={true}
                   spellCheck={false}
@@ -1058,6 +1139,14 @@ function AssetRow(props: {
               className="mx-0.5 my-auto text-gray11! text-xs! sm:mx-1"
               onClick={(event) => {
                 event.preventDefault()
+                if (
+                  Number(sendFormState.values.sendAmount) >=
+                  Number(formattedBalance)
+                ) {
+                  toast.error('Amount is too high')
+                  return
+                }
+
                 sendForm.setValue(
                   sendForm.names.sendAmount,
                   Number(formattedBalance),
@@ -1083,8 +1172,8 @@ function AssetRow(props: {
                   ? 'bg-accent text-white hover:bg-accentHover'
                   : 'cursor-not-allowed bg-gray4 *:text-gray8! hover:bg-gray7',
               )}
-              onClick={submitForm}
-              type="button"
+              // onClick={submitForm}
+              // type="button"
             >
               {sendCalls.isPending || callStatus.isFetching ? (
                 <Spinner className="size-3! sm:size-4!" />

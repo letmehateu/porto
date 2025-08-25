@@ -11,12 +11,13 @@ export const config = createConfig({
 })
 
 export const mipdConfig = createConfig({
-  chains: config.chains,
+  chains: Porto.config.chains,
   multiInjectedProviderDiscovery: true,
   storage: null,
   transports: config._internal.transports,
 })
 
+// export const client = getWalletClient(config)
 export const getChainConfig = (chainId: number) =>
   config.chains.find((c) => c.id === chainId)
 

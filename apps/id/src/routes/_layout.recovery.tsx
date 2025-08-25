@@ -1,12 +1,13 @@
 import * as Ariakit from '@ariakit/react'
 import { Button, Spinner, Toast } from '@porto/apps/components'
-import { createFileRoute, Link, redirect } from '@tanstack/react-router'
-import { baseSepolia } from 'porto/core/Chains'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { base, baseSepolia } from 'porto/core/Chains'
 import { Hooks } from 'porto/wagmi'
 import * as React from 'react'
 import { toast } from 'sonner'
 import {
   type Connector,
+  useAccount,
   useConnect,
   useConnectors,
   useDisconnect,
@@ -21,17 +22,11 @@ import XIcon from '~icons/lucide/x'
 import { Layout } from './-components/Layout'
 
 export const Route = createFileRoute('/_layout/recovery')({
-  beforeLoad: ({ context }) => {
-    if (!context.account.isConnected) throw redirect({ to: '/' })
-
-    return { account: context.account, queryClient: context.queryClient }
-  },
   component: RouteComponent,
 })
 
 function RouteComponent() {
-  const { account: portoAccount } = Route.useRouteContext()
-
+  const account = useAccount()
   const [view, setView] = React.useState<'default' | 'success' | 'loading'>(
     'default',
   )
@@ -73,6 +68,10 @@ function RouteComponent() {
     event.stopPropagation()
 
     try {
+      const chainId =
+        import.meta.env.VITE_VERCEL_ENV === 'production'
+          ? base.id
+          : baseSepolia.id
       // 1. disconnect in case user is connected from previous sessions
       await disconnectAll()
 
@@ -81,7 +80,7 @@ function RouteComponent() {
       let address = await tryConnect(connector)
       if (!address) {
         await switchChain.switchChainAsync({
-          chainId: baseSepolia.id,
+          chainId,
         })
         address = await tryConnect(connector)
       }
@@ -89,7 +88,8 @@ function RouteComponent() {
       if (!address) throw new Error('Failed to connect to wallet')
 
       const granted = await grantAdmin.mutateAsync({
-        address: portoAccount.address,
+        address: account.address,
+        chainId,
         key: { publicKey: address, type: 'address' },
       })
 
