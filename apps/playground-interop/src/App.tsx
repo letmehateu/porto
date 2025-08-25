@@ -22,7 +22,7 @@ import {
   useSwitchChain,
   useWaitForCallsStatus,
 } from 'wagmi'
-import type { ChainId } from './config'
+import { type ChainId, testnet } from './config'
 
 export function App() {
   const { isConnected } = useAccount()
@@ -185,9 +185,9 @@ function Actions({ chainId }: { chainId: Exclude<ChainId, 0> }) {
   return (
     <div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <Mint chainId={chainId} />
+        {testnet && <Mint chainId={chainId} />}
         <Transfer chainId={chainId} />
-        <Swap chainId={chainId} />
+        {testnet && <Swap chainId={chainId} />}
       </div>
     </div>
   )
@@ -261,8 +261,13 @@ function Transfer({ chainId }: { chainId: Exclude<ChainId, 0> }) {
   const account = useAccount()
   const { data: capabilities, isLoading } = useCapabilities({ chainId })
 
+  const tokens = React.useMemo(
+    () => capabilities?.feeToken.tokens,
+    [capabilities],
+  )
+
   return (
-    <Action title="Transfer">
+    <Action loading={isLoading} title="Transfer">
       {({ sendCalls }) => (
         <form
           onSubmit={(e) => {
@@ -327,16 +332,17 @@ function Transfer({ chainId }: { chainId: Exclude<ChainId, 0> }) {
                 style={{ flex: 1 }}
                 type="number"
               />
-              <select defaultValue="EXP" name="symbol">
-                <option value="EXP">EXP</option>
-                <option value="EXP2">EXP2</option>
-                <option value="USDC">USDC</option>
-                <option value="ETH">ETH</option>
-              </select>
+              {tokens?.[0]?.symbol && (
+                <select defaultValue={tokens?.[0]?.symbol} name="symbol">
+                  {tokens?.map((token) => (
+                    <option key={token.symbol} value={token.symbol}>
+                      {token.symbol}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
-            <button disabled={isLoading} type="submit">
-              Transfer
-            </button>
+            <button type="submit">Transfer</button>
           </div>
         </form>
       )}
@@ -468,11 +474,13 @@ function Swap({ chainId }: { chainId: Exclude<ChainId, 0> }) {
 
 function Action({
   children,
+  loading,
   title,
 }: {
   children: <config extends Config>(props: {
     sendCalls: UseSendCallsReturnType<config>
   }) => React.ReactNode
+  loading?: boolean | undefined
   title: string
 }) {
   const sendCalls = useSendCalls()
@@ -495,7 +503,7 @@ function Action({
       <p>
         <strong>{title}</strong>
       </p>
-      {children({ sendCalls })}
+      {loading ? <div>Loading...</div> : children({ sendCalls })}
       <div style={{ minHeight: 20 }}>
         {waitForCallsStatus.isFetching && <div>Waiting for inclusion...</div>}
         {waitForCallsStatus.isSuccess && (

@@ -5,7 +5,9 @@ import { createConfig, createStorage } from 'wagmi'
 
 export const config = PortoConfig.getConfig()
 
-const testnet = new URLSearchParams(window.location.search).get('testnets')
+export const testnet = new URLSearchParams(window.location.search).get(
+  'testnets',
+)
 
 export const wagmiConfig = createConfig({
   chains: config.chains.filter((c) =>
