@@ -88,17 +88,16 @@ const offDialogRequest = Events.onDialogRequest(
     // Clear errors when the request is null (i.e. when the dialog is closed).
     if (!request) Dialog.store.setState({ error: null })
 
-    if (requireAccountSync)
+    if (requireAccountSync) {
       await Router.router.navigate({
         to: '/dialog/pending',
       })
-
-    if (requireAccountSync)
       await Actions.connect(Wagmi.config, {
         connector: getConnectors(Wagmi.config)[0]!,
         force: true,
         selectAccount: account,
       }).catch(() => {})
+    }
 
     await Router.router.navigate({
       search: (search) => {
