@@ -463,10 +463,15 @@ export function dialog(parameters: dialog.Parameters = {}) {
 
       async loadAccounts(parameters) {
         const { internal } = parameters
-        const { client, config, store, request } = internal
+        const { client, config, store } = internal
         const { storage } = config
 
         const provider = getProvider(store)
+
+        const request =
+          internal.request as typeof RpcSchema_porto.wallet_connect.Request.Encoded & {
+            _decoded: RpcSchema_porto.wallet_connect.Request
+          }
 
         if (
           request.method !== 'wallet_connect' &&
