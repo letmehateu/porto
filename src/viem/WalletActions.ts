@@ -160,7 +160,7 @@ export async function disconnect(client: Client) {
     Extract<RpcSchema_viem.Wallet[number], { Method: Method }>
   >({
     method,
-  })
+  } as never)
 }
 
 export async function getAdmins(
