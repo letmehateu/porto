@@ -20,7 +20,7 @@ import {
 } from 'ox'
 import { Dialog } from 'porto'
 import * as React from 'react'
-import { hashMessage, hashTypedData } from 'viem'
+import { hashMessage, hashTypedData, isAddress } from 'viem'
 import {
   generatePrivateKey,
   privateKeyToAccount,
@@ -170,7 +170,7 @@ export function App() {
         <SendCalls />
         <SendTransaction />
         <SignMessage />
-        <SignTypedData />
+        <SignTypedMessage />
         <div>
           <br />
           <hr />
@@ -1338,69 +1338,287 @@ function SignMessage() {
   )
 }
 
-function SignTypedData() {
-  const [signature, setSignature] = React.useState<string | null>(null)
-  const [valid, setValid] = React.useState<boolean | null>(null)
+function SignTypedMessage() {
+  const [error, setError] = React.useState<string | null>(null)
+  const [typedMessage, setTypedMessage] = React.useState<null | {
+    hash: `0x${string}`
+    signature: `0x${string}`
+  }>(null)
+  const [verifyStatus, setVerifyStatus] = React.useState<
+    null | 'verifying' | 'valid' | 'invalid'
+  >(null)
+
+  const signMessage = async () => {
+    const [account] = await porto.provider.request({
+      method: 'eth_accounts',
+    })
+    const signature = await porto.provider.request({
+      method: 'eth_signTypedData_v4',
+      params: [account, TypedData.serialize(typedData)],
+    })
+    return {
+      hash: hashTypedData(typedData),
+      signature,
+    }
+  }
+
+  const signPermit = async ({
+    deadline,
+    spender,
+    value,
+  }: {
+    deadline: bigint
+    spender: null | `0x${string}`
+    value: bigint
+  }) => {
+    const [account, chainId] = await Promise.all([
+      porto.provider
+        .request({ method: 'eth_accounts' })
+        .then(([account]) => account),
+      porto.provider
+        .request({ method: 'eth_chainId' })
+        .then(Hex.toNumber) as Promise<ChainId>,
+    ])
+
+    if (spender !== null && !isAddress(spender))
+      throw new Error(`invalid spender address: ${spender}`)
+
+    if (!spender) spender = account
+
+    const tokenAddress = exp1Address[chainId as keyof typeof exp1Address]
+    if (!tokenAddress) throw new Error(`no EXP on chain ${chainId}`)
+
+    const symbolFn = AbiFunction.fromAbi(exp1Abi, 'symbol')
+    const noncesFn = AbiFunction.fromAbi(exp1Abi, 'nonces')
+    const [name, nonce] = await Promise.all([
+      porto.provider
+        .request({
+          method: 'eth_call',
+          params: [
+            {
+              data: AbiFunction.encodeData(symbolFn),
+              to: tokenAddress,
+            },
+          ],
+        })
+        .then((result) => AbiFunction.decodeResult(symbolFn, result)),
+      porto.provider
+        .request({
+          method: 'eth_call',
+          params: [
+            {
+              data: AbiFunction.encodeData(noncesFn, [account]),
+              to: tokenAddress,
+            },
+          ],
+        })
+        .then((result) => AbiFunction.decodeResult(noncesFn, result)),
+    ])
+
+    const message = {
+      domain: {
+        chainId: chainId,
+        name,
+        verifyingContract: tokenAddress,
+        version: '1',
+      },
+      message: {
+        deadline: BigInt(deadline),
+        nonce: BigInt(nonce),
+        owner: account,
+        spender: spender,
+        value,
+      },
+      primaryType: 'Permit',
+      types: {
+        Permit: [
+          { name: 'owner', type: 'address' },
+          { name: 'spender', type: 'address' },
+          { name: 'value', type: 'uint256' },
+          { name: 'nonce', type: 'uint256' },
+          { name: 'deadline', type: 'uint256' },
+        ],
+      },
+    } as const
+
+    const signature = await porto.provider.request({
+      method: 'eth_signTypedData_v4',
+      params: [account, TypedData.serialize(message)],
+    })
+
+    return {
+      hash: hashTypedData(message),
+      signature,
+    }
+  }
+
+  React.useEffect(() => {
+    if (verifyStatus !== 'verifying' || !typedMessage) return
+
+    let cancel = false
+
+    const verifySignature = async () => {
+      try {
+        const [account] = await porto.provider.request({
+          method: 'eth_accounts',
+        })
+
+        const { valid } = await porto.provider.request({
+          method: 'wallet_verifySignature',
+          params: [
+            {
+              address: account,
+              digest: typedMessage.hash,
+              signature: typedMessage.signature,
+            },
+          ],
+        })
+
+        if (cancel) return
+        setVerifyStatus(valid ? 'valid' : 'invalid')
+      } catch (err) {
+        if (cancel) return
+        console.error(err)
+        setVerifyStatus(null)
+        setError(String(err))
+      }
+    }
+    verifySignature()
+
+    return () => {
+      cancel = true
+    }
+  }, [typedMessage, verifyStatus])
+
+  const [copied, setCopied] = React.useState(false)
+  React.useEffect(() => {
+    if (!copied) return
+    const timeout = setTimeout(() => setCopied(false), 300)
+    return () => clearTimeout(timeout)
+  }, [copied])
 
   return (
-    <>
+    <div className="flex flex-col gap-4 pt-6 pb-3">
+      <h3 className="m-0 pb-0">eth_signTypedData_v4</h3>
+      <div
+        style={{
+          display: 'flex',
+          gap: 8,
+          height: 32,
+        }}
+      >
+        <button
+          className="box-border h-full px-2"
+          onClick={async () => {
+            setError(null)
+            setTypedMessage(null)
+            setVerifyStatus(null)
+
+            try {
+              setTypedMessage(await signMessage())
+            } catch (err) {
+              console.error(err)
+              setError(String(err))
+            }
+          }}
+          type="submit"
+        >
+          Sign ERC-712 Typed Message
+        </button>
+      </div>
+
       <form
         onSubmit={async (e) => {
           e.preventDefault()
+          setError(null)
+          setTypedMessage(null)
+          setVerifyStatus(null)
 
-          const [account] = await porto.provider.request({
-            method: 'eth_accounts',
-          })
-          const result = await porto.provider.request({
-            method: 'eth_signTypedData_v4',
-            params: [account, TypedData.serialize(typedData)],
-          })
-          setSignature(result)
+          const formData = new FormData(e.target as HTMLFormElement)
+          const amount = formData.get('amount') as string | null
+          const spender = formData.get('spender') as string | null
+
+          try {
+            setTypedMessage(
+              await signPermit({
+                deadline: BigInt(Math.floor(Date.now() / 1000) + 60 * 10),
+                spender: spender && isAddress(spender) ? spender : null,
+                value: Value.fromEther(amount || '98797971.987239723'),
+              }),
+            )
+          } catch (err) {
+            console.error(err)
+            setError(String(err))
+          }
         }}
       >
-        <h3>eth_signTypedData_v4</h3>
-        <button type="submit">Sign</button>
-        <pre
+        <div
           style={{
-            maxWidth: '500px',
-            overflowWrap: 'anywhere',
-            // @ts-expect-error
-            textWrapMode: 'wrap',
+            display: 'flex',
+            gap: 8,
+            height: 32,
           }}
         >
-          {signature}
-        </pre>
-      </form>
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault()
-          const formData = new FormData(e.target as HTMLFormElement)
-          const signature = formData.get('signature') as `0x${string}`
-
-          const [account] = await porto.provider.request({
-            method: 'eth_accounts',
-          })
-
-          const { valid } = await porto.provider.request({
-            method: 'wallet_verifySignature',
-            params: [
-              {
-                address: account,
-                digest: hashTypedData(typedData),
-                signature,
-              },
-            ],
-          })
-          setValid(valid)
-        }}
-      >
-        <div>
-          <textarea name="signature" placeholder="signature" />
+          <input
+            className="box-border h-full px-2"
+            name="spender"
+            placeholder="Spender address (default: self)"
+          />
+          <input
+            className="box-border flex h-full px-2"
+            name="amount"
+            placeholder="Amount in EXP (default: 100)"
+          />
+          <button className="box-border h-full px-2" type="submit">
+            Sign ERC-2612 Permit
+          </button>
         </div>
-        <button type="submit">Verify</button>
-        {valid !== null && <pre>{valid ? 'valid' : 'invalid'}</pre>}
       </form>
-    </>
+
+      {error ? (
+        <div className="flex flex-col gap-2">
+          <h4 className="m-0">Signing error</h4>
+          <div className="">{error}</div>
+        </div>
+      ) : (
+        typedMessage && (
+          <div className="flex flex-col gap-2">
+            <h4 className="m-0">Signature</h4>
+            <div className="wrap-anywhere m-0 min-h-40 pb-2 font-mono text-xs">
+              {typedMessage.signature}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                className="px-2 py-1 text-sm"
+                disabled={copied}
+                onClick={() => {
+                  navigator.clipboard.writeText(typedMessage.signature ?? '')
+                  setCopied(true)
+                }}
+                type="button"
+              >
+                {copied ? 'Copied.' : 'Copy'}
+              </button>
+              <button
+                className="px-2 py-1 text-sm"
+                disabled={verifyStatus === 'verifying'}
+                onClick={() => setVerifyStatus('verifying')}
+                type="button"
+              >
+                {verifyStatus === 'verifying' ? 'Verifying…' : 'Verify'}
+              </button>
+
+              {(verifyStatus === 'valid' || verifyStatus === 'invalid') && (
+                <div>
+                  Message signature{' '}
+                  {verifyStatus === 'valid' ? 'valid' : 'invalid'}.
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      )}
+    </div>
   )
 }
 
