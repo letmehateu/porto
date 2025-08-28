@@ -23,6 +23,7 @@ export function SignTypedMessage({
   isPending,
 }: SignTypedMessage.Props) {
   const frame = Frame.useFrame()
+  const chainId = Number(data.domain.chainId)
   return (
     <Layout>
       <Layout.Header>
@@ -48,7 +49,7 @@ export function SignTypedMessage({
             <div className="wrap-anywhere font-mono text-[12px] text-th_base leading-6">
               <div
                 className="px-3 text-th_accent"
-                title={`${data.domain.name} (${data.domain.version}) at ${data.domain.chainId}`}
+                title={`${data.domain.name} (${data.domain.version}) at ${chainId}`}
               >
                 {data.domain.name}
               </div>
@@ -150,6 +151,75 @@ export namespace SignTypedMessage {
   }
 }
 
+export function SignTypedMessageInvalid({
+  data,
+  onSign,
+  onReject,
+  isPending,
+}: SignTypedMessageInvalid.Props) {
+  const frame = Frame.useFrame()
+  return (
+    <Layout>
+      <Layout.Header>
+        <Layout.Header.Default
+          content="The message format appears to be invalid."
+          icon={LucidePencilLine}
+          title="Sign message"
+          variant="default"
+        />
+      </Layout.Header>
+
+      <div className="flex-shrink flex-grow p-[12px] pt-0">
+        <div className="flex-shrink flex-grow rounded-lg bg-th_base-alt py-2">
+          <div className="px-[12px] pb-[4px] font-medium text-[12px] text-th_base-secondary">
+            Contents
+          </div>
+          <div
+            className={cx(
+              'flex-shrink flex-grow overflow-auto',
+              frame.mode === 'dialog' && 'max-h-[200px]',
+            )}
+          >
+            <div className="wrap-anywhere px-[12px] font-mono text-[12px] text-th_base-secondary leading-6">
+              {data}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Layout.Footer>
+        <Layout.Footer.Actions>
+          <Button
+            disabled={isPending}
+            onClick={onReject}
+            variant="secondary"
+            width="grow"
+          >
+            Deny
+          </Button>
+          <Button
+            loading={isPending && 'Signing…'}
+            onClick={onSign}
+            variant="negative"
+            width="grow"
+          >
+            Approve anyway
+          </Button>
+        </Layout.Footer.Actions>
+      </Layout.Footer>
+    </Layout>
+  )
+}
+
+export namespace SignTypedMessageInvalid {
+  export type Props = {
+    data: string
+    onSign: () => void
+    onReject: () => void
+    isPending: boolean
+  }
+}
+
 export function SignPermit({
   data,
   onSign,
@@ -157,6 +227,7 @@ export function SignPermit({
   isPending,
 }: SignPermit.Props) {
   const tokenContract = data.domain.verifyingContract
+  const chainId = Number(data.domain.chainId)
   const tokenResult = useReadContracts({
     allowFailure: false,
     contracts: [
@@ -222,8 +293,7 @@ export function SignPermit({
               <div className="flex h-[33px] w-full items-center justify-between gap-[6px] rounded-th_medium bg-th_base-alt px-[12px] text-[13px]">
                 <span className="text-th_base-secondary">Network</span>
                 <span className="font-medium text-th_base">
-                  {Chains.all.find((c) => c.id === data.domain.chainId)?.name ||
-                    'Unknown'}
+                  {Chains.all.find((c) => c.id === chainId)?.name || 'Unknown'}
                 </span>
               </div>
             ) : (
