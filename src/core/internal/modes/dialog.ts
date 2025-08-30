@@ -896,6 +896,7 @@ export function dialog(parameters: dialog.Parameters = {}) {
                 // @ts-expect-error
                 capabilities: {
                   feeToken,
+                  merchantRpcUrl,
                   preCalls,
                 },
               },
