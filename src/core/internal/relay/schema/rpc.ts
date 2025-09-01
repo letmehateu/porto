@@ -408,8 +408,7 @@ export namespace wallet_prepareCalls {
     /** The calls to prepare. */
     capabilities: Capabilities,
     /** The chain ID of the call bundle. */
-    // TODO: `Primitive.Number`
-    chainId: Schema.Number,
+    chainId: Primitive.Number,
     /** The address of the account to prepare the calls for. */
     from: Schema.optional(Primitive.Address),
     /** Key that will be used to sign the call bundle. */
