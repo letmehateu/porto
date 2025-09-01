@@ -1004,7 +1004,7 @@ export const exp1Abi = [
   { inputs: [], name: 'Unauthorized', type: 'error' },
 ] as const
 
-export const exp1Address = '0x2Ec346E29Da8634C9be334b0fdDCb60754700976' as const
+export const exp1Address = '0x2d49a0e75c86779C391418214eC7e1B18E58Bb34' as const
 
 export const exp1Config = { abi: exp1Abi, address: exp1Address } as const
 
@@ -1309,7 +1309,7 @@ export const exp2Abi = [
   { inputs: [], name: 'Unauthorized', type: 'error' },
 ] as const
 
-export const exp2Address = '0x2Ec346E29Da8634C9be334b0fdDCb60754700976' as const
+export const exp2Address = '0x7C61733E8a9c6Dac20afeB46e9c4ba96C5A9f7cf' as const
 
 export const exp2Config = { abi: exp2Abi, address: exp2Address } as const
 
