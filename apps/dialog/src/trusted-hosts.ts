@@ -3,4 +3,5 @@ export const hostnames = [
   'bluestake.vercel.app',
   'daimo.ngrok.app',
   'localhost',
+  'pay.daimo.com',
 ]
