@@ -8,7 +8,7 @@ import type * as Capabilities_schema from 'porto/core/internal/schema/capabiliti
 import type * as FeeToken_schema from 'porto/core/internal/schema/feeToken'
 import { Hooks } from 'porto/remote'
 import type { RelayClient } from 'porto/viem'
-
+import { hostnames } from '../trusted-hosts'
 import * as FeeTokens from './FeeTokens'
 import { porto } from './Porto'
 
@@ -158,39 +158,21 @@ export namespace prepareCallsWithMerchant {
         const [, parameters] = queryKey
         const { merchantRpcUrl } = parameters
 
-        const data = await Query_porto.client.fetchQuery(
+        // TODO: remove this once relay implements `wallet_verifyCalls` for
+        // permissionless merchants.
+        if (merchantRpcUrl) {
+          const hostname = new URL(merchantRpcUrl).hostname
+          if (!hostnames.includes(hostname))
+            throw new Error(
+              'Merchant hostname "' +
+                hostname +
+                '" is not trusted.\nOpen a PR to add your hostname: https://github.com/ithacaxyz/porto/edit/main/apps/dialog/trusted-hosts.ts',
+            )
+        }
+
+        return await Query_porto.client.fetchQuery(
           prepareCalls.queryOptions(client, parameters),
         )
-        const data_noMerchantRpc = await (async () => {
-          if (!merchantRpcUrl) return data
-          const quotes = data.context.quote?.quotes
-          const intent = quotes?.[quotes.length - 1]?.intent
-          const data_noMerchantRpc = await Query_porto.client.fetchQuery(
-            prepareCalls.queryOptions(client, {
-              ...parameters,
-              feePayer: intent?.payer,
-              merchantRpcUrl: undefined,
-              nonce: intent?.nonce,
-            }),
-          )
-          if (data_noMerchantRpc.digest !== data.digest)
-            throw new Error(
-              'digest between merchant and porto relay do not match.',
-            )
-          return data_noMerchantRpc
-        })()
-
-        return {
-          ...data_noMerchantRpc,
-          capabilities: {
-            ...data_noMerchantRpc.capabilities,
-            ...(data?.capabilities.feeSignature
-              ? {
-                  feeSignature: data.capabilities.feeSignature,
-                }
-              : {}),
-          },
-        }
       },
       queryKey: prepareCalls.queryOptions.queryKey(client, options),
       refetchInterval,
