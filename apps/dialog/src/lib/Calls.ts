@@ -8,7 +8,6 @@ import type * as Capabilities_schema from 'porto/core/internal/schema/capabiliti
 import type * as FeeToken_schema from 'porto/core/internal/schema/feeToken'
 import { Hooks } from 'porto/remote'
 import type { RelayClient } from 'porto/viem'
-import { hostnames } from '../trusted-hosts'
 import * as FeeTokens from './FeeTokens'
 import { porto } from './Porto'
 
@@ -142,80 +141,5 @@ export namespace prepareCalls {
       }
 
     export type Data = queryOptions.Data
-  }
-}
-
-export namespace prepareCallsWithMerchant {
-  export function queryOptions<const calls extends readonly unknown[]>(
-    client: RelayClient.RelayClient,
-    options: queryOptions.Options<calls>,
-  ) {
-    const { account, enabled = true, refetchInterval } = options
-
-    return Query.queryOptions({
-      enabled: enabled && !!account,
-      async queryFn({ queryKey }) {
-        const [, parameters] = queryKey
-        const { merchantRpcUrl } = parameters
-
-        // TODO: remove this once relay implements `wallet_verifyCalls` for
-        // permissionless merchants.
-        if (merchantRpcUrl) {
-          const hostname = new URL(merchantRpcUrl).hostname
-          if (!hostnames.includes(hostname))
-            throw new Error(
-              'Merchant hostname "' +
-                hostname +
-                '" is not trusted.\nOpen a PR to add your hostname: https://github.com/ithacaxyz/porto/edit/main/apps/dialog/trusted-hosts.ts',
-            )
-        }
-
-        return await Query_porto.client.fetchQuery(
-          prepareCalls.queryOptions(client, parameters),
-        )
-      },
-      queryKey: prepareCalls.queryOptions.queryKey(client, options),
-      refetchInterval,
-    })
-  }
-
-  export namespace queryOptions {
-    export type Data = prepareCalls.queryOptions.Data
-    export type Error = prepareCalls.queryOptions.Error
-    export type QueryKey = prepareCalls.queryOptions.QueryKey
-
-    export type Options<calls extends readonly unknown[] = readonly unknown[]> =
-      prepareCalls.queryOptions.Options<calls>
-
-    export function queryKey<const calls extends readonly unknown[]>(
-      client: RelayClient.RelayClient,
-      options: queryKey.Options<calls>,
-    ) {
-      return ['prepareCallsWithMerchant', options, client.uid] as const
-    }
-
-    export namespace queryKey {
-      export type Options<
-        calls extends readonly unknown[] = readonly unknown[],
-      > = prepareCalls.queryOptions.queryKey.Options<calls>
-    }
-  }
-
-  export function useQuery<const calls extends readonly unknown[]>(
-    props: useQuery.Props<calls>,
-  ) {
-    const { address, chainId } = props
-
-    const account = Hooks.useAccount(porto, { address })
-    const client = Hooks.useRelayClient(porto, { chainId })
-
-    return Query.useQuery(queryOptions(client, { ...props, account }))
-  }
-
-  export namespace useQuery {
-    export type Props<calls extends readonly unknown[] = readonly unknown[]> =
-      prepareCalls.useQuery.Props<calls>
-
-    export type Data = prepareCalls.useQuery.Data
   }
 }

@@ -1970,62 +1970,125 @@ describe.each([['relay', Mode.relay]] as const)('%s', (type, mode) => {
       expect(merchantBalance_post).toBeLessThan(merchantBalance_pre)
     })
 
-    test.runIf(type === 'relay')(
-      'behavior: merchant fee sponsor (porto config)',
-      async () => {
-        const p = getPorto()
-        const client = TestConfig.getRelayClient(p)
-        const contracts = await TestConfig.getContracts(p)
+    test('behavior: merchant fee sponsor (porto config)', async () => {
+      const p = getPorto()
+      const client = TestConfig.getRelayClient(p)
+      const contracts = await TestConfig.getContracts(p)
 
-        const merchantKey = Key.createSecp256k1()
-        const merchantAccount = await createAccount(client, {
-          deploy: true,
-          keys: [merchantKey],
-        })
+      const merchantKey = Key.createSecp256k1()
+      const merchantAccount = await createAccount(client, {
+        deploy: true,
+        keys: [merchantKey],
+      })
 
-        const listener = MerchantRpc.requestListener({
-          ...p.config,
-          address: merchantAccount.address,
-          key: {
-            privateKey: merchantKey.privateKey!(),
-            type: merchantKey.type,
+      const listener = MerchantRpc.requestListener({
+        ...p.config,
+        address: merchantAccount.address,
+        key: {
+          privateKey: merchantKey.privateKey!(),
+          type: merchantKey.type,
+        },
+      })
+      const server = await Http.createServer(listener)
+
+      const porto = getPorto({ merchantRpcUrl: server.url })
+
+      const {
+        accounts: [account],
+      } = await porto.provider.request({
+        method: 'wallet_connect',
+        params: [
+          {
+            capabilities: { createAccount: true },
           },
-        })
-        const server = await Http.createServer(listener)
+        ],
+      })
+      const address = account!.address
 
-        const porto = getPorto({ merchantRpcUrl: server.url })
+      await setBalance(client, {
+        address,
+        value: Value.fromEther('10000'),
+      })
 
-        const {
-          accounts: [account],
-        } = await porto.provider.request({
-          method: 'wallet_connect',
-          params: [
-            {
-              capabilities: { createAccount: true },
-            },
-          ],
-        })
-        const address = account!.address
+      const userBalance_pre = await readContract(client, {
+        abi: contracts.exp1.abi,
+        address: contracts.exp1.address,
+        args: [address],
+        functionName: 'balanceOf',
+      })
+      const merchantBalance_pre = await readContract(client, {
+        abi: contracts.exp1.abi,
+        address: contracts.exp1.address,
+        args: [merchantAccount.address],
+        functionName: 'balanceOf',
+      })
 
-        await setBalance(client, {
-          address,
-          value: Value.fromEther('10000'),
-        })
+      const { id } = await porto.provider.request({
+        method: 'wallet_sendCalls',
+        params: [
+          {
+            calls: [
+              {
+                data: encodeFunctionData({
+                  abi: contracts.exp1.abi,
+                  args: [Hex.random(20), Value.fromEther('1')],
+                  functionName: 'transfer',
+                }),
+                to: contracts.exp1.address,
+              },
+            ],
+            from: address,
+            version: '1',
+          },
+        ],
+      })
 
-        const userBalance_pre = await readContract(client, {
-          abi: contracts.exp1.abi,
-          address: contracts.exp1.address,
-          args: [address],
-          functionName: 'balanceOf',
-        })
-        const merchantBalance_pre = await readContract(client, {
-          abi: contracts.exp1.abi,
-          address: contracts.exp1.address,
-          args: [merchantAccount.address],
-          functionName: 'balanceOf',
-        })
+      expect(id).toBeDefined()
 
-        const { id } = await porto.provider.request({
+      await waitForCallsStatus(WalletClient.fromPorto(porto), {
+        id,
+      })
+
+      const userBalance_post = await readContract(client, {
+        abi: contracts.exp1.abi,
+        address: contracts.exp1.address,
+        args: [address],
+        functionName: 'balanceOf',
+      })
+      const merchantBalance_post = await readContract(client, {
+        abi: contracts.exp1.abi,
+        address: contracts.exp1.address,
+        args: [merchantAccount.address],
+        functionName: 'balanceOf',
+      })
+
+      // Check if user was debited 1 EXP.
+      expect(userBalance_post).toBe(userBalance_pre - Value.fromEther('1'))
+
+      // Check if merchant was debited the fee payment.
+      expect(merchantBalance_post).toBeLessThan(merchantBalance_pre)
+    })
+
+    test('behavior: invalid merchant RPC URL', async () => {
+      const p = getPorto()
+      const contracts = await TestConfig.getContracts(p)
+
+      const porto = getPorto({ merchantRpcUrl: 'https://example.com/rpc' })
+
+      const {
+        accounts: [account],
+      } = await porto.provider.request({
+        method: 'wallet_connect',
+        params: [
+          {
+            capabilities: { createAccount: true },
+          },
+        ],
+      })
+      const address = account!.address
+
+      await expect(() =>
+        porto.provider.request({
           method: 'wallet_sendCalls',
           params: [
             {
@@ -2043,34 +2106,9 @@ describe.each([['relay', Mode.relay]] as const)('%s', (type, mode) => {
               version: '1',
             },
           ],
-        })
-
-        expect(id).toBeDefined()
-
-        await waitForCallsStatus(WalletClient.fromPorto(porto), {
-          id,
-        })
-
-        const userBalance_post = await readContract(client, {
-          abi: contracts.exp1.abi,
-          address: contracts.exp1.address,
-          args: [address],
-          functionName: 'balanceOf',
-        })
-        const merchantBalance_post = await readContract(client, {
-          abi: contracts.exp1.abi,
-          address: contracts.exp1.address,
-          args: [merchantAccount.address],
-          functionName: 'balanceOf',
-        })
-
-        // Check if user was debited 1 EXP.
-        expect(userBalance_post).toBe(userBalance_pre - Value.fromEther('1'))
-
-        // Check if merchant was debited the fee payment.
-        expect(merchantBalance_post).toBeLessThan(merchantBalance_pre)
-      },
-    )
+        }),
+      ).rejects.toThrowError('Merchant hostname "example.com" is not trusted.')
+    })
 
     test('behavior: use inferred permissions', async () => {
       const porto = getPorto()

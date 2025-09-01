@@ -49,7 +49,7 @@ export function ActionRequest(props: ActionRequest.Props) {
 
   const account = Hooks.useAccount(porto, { address })
 
-  const prepareCallsQuery = Calls.prepareCallsWithMerchant.useQuery({
+  const prepareCallsQuery = Calls.prepareCalls.useQuery({
     address,
     calls,
     chainId,

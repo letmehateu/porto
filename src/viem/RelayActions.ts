@@ -15,6 +15,7 @@ import type { Chain } from '../core/Chains.js'
 import type * as Capabilities from '../core/internal/relay/schema/capabilities.js'
 import type * as Quotes from '../core/internal/relay/schema/quotes.js'
 import type { OneOf, PartialBy, RequiredBy } from '../core/internal/types.js'
+import { hostnames } from '../trusted-hosts.js'
 import * as Account from './Account.js'
 import * as RelayActions from './internal/relayActions.js'
 import type { GetAccountParameter } from './internal/utils.js'
@@ -179,6 +180,16 @@ export async function prepareCalls<
 
   const { capabilities, context, digest, typedData } = await (async () => {
     if (merchantRpcUrl) {
+      // TODO: remove this once relay implements `wallet_verifyCalls` for
+      // permissionless merchants.
+      const hostname = new URL(merchantRpcUrl).hostname
+      if (!hostnames.includes(hostname))
+        throw new Error(
+          'Merchant hostname "' +
+            hostname +
+            '" is not trusted.\nOpen a PR to add your hostname: https://github.com/ithacaxyz/porto/edit/main/src/trusted-hosts.ts',
+        )
+
       const client_ = createClient({
         chain: client.chain,
         transport: http(merchantRpcUrl),
