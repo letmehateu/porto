@@ -200,6 +200,9 @@ export function relay(parameters: relay.Parameters = {}) {
           atomic: {
             status: 'supported',
           },
+          atomicBatch: {
+            supported: true,
+          },
           feeToken: {
             supported: true,
             tokens: [],
