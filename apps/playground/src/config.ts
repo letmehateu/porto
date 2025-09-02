@@ -8,7 +8,9 @@ import type { ThemeFragment } from 'porto/theme'
 export type ChainId = (typeof config.chains)[number]['id']
 
 const config = PortoConfig.getConfig()
-const host = PortoConfig.getDialogHost()
+const host =
+  new URLSearchParams(window.location.search).get('dialogHost') ||
+  PortoConfig.getDialogHost()
 
 const dialogModes = {
   'iframe-dialog': (parameters: Mode.dialog.Parameters) =>
