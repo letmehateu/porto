@@ -33,11 +33,13 @@ export function Approve(props: Approve.Props) {
       {
         abi: erc20Abi,
         address: tokenAddress,
+        chainId: chainId as never,
         functionName: 'decimals',
       },
       {
         abi: erc20Abi,
         address: tokenAddress,
+        chainId: chainId as never,
         functionName: 'symbol',
       },
     ],
