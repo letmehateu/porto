@@ -117,6 +117,16 @@ export function AddFunds(props: AddFunds.Props) {
     }
   }, [balanceMap, onApprove, previousBalanceMap])
 
+  const showFaucet = React.useMemo(() => {
+    // Don't show faucet if not on "default" view.
+    if (view !== 'default') return false
+    // Show faucet if on a testnet and no target token is provided.
+    if (!tokenAddress && chain?.testnet) return true
+    // Show faucet if the fee token is an EXP token.
+    if (feeToken?.uid.startsWith('exp')) return true
+    return false
+  }, [chain, feeToken, tokenAddress, view])
+
   if (view === 'error')
     return (
       <Layout>
@@ -180,7 +190,7 @@ export function AddFunds(props: AddFunds.Props) {
 
       <Layout.Content>
         <div className="flex flex-col gap-3">
-          {view === 'default' && feeToken?.uid.startsWith('exp') && (
+          {showFaucet && (
             <>
               <Faucet
                 address={address}
