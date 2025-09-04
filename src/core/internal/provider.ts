@@ -1147,7 +1147,7 @@ export function from<
       )
     })
 
-    const unannounce = announce(provider as Provider, config.announceProvider)
+    const unannounce = announce(provider as Provider, announceProvider)
 
     return () => {
       unsubscribe_accounts()
