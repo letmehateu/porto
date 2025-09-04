@@ -5,8 +5,8 @@ import { cx } from 'cva'
 import { type Address, Base64, type Hex } from 'ox'
 import type * as Capabilities from 'porto/core/internal/relay/schema/capabilities'
 import type * as Quote_schema from 'porto/core/internal/relay/schema/quotes'
-import type * as FeeToken_schema from 'porto/core/internal/schema/feeToken.js'
 import type * as Rpc from 'porto/core/internal/schema/request'
+import type * as Token from 'porto/core/internal/schema/token.js'
 import { Hooks } from 'porto/remote'
 import * as React from 'react'
 import {
@@ -219,7 +219,7 @@ export namespace ActionRequest {
     calls: readonly Call[]
     chainId?: number | undefined
     checkBalance?: boolean | undefined
-    feeToken?: FeeToken_schema.Symbol | Address.Address | undefined
+    feeToken?: Token.Symbol | Address.Address | undefined
     loading?: boolean | undefined
     merchantRpcUrl?: string | undefined
     requiredFunds?:
@@ -479,8 +479,8 @@ export namespace ActionRequest {
       error,
       errorMessage = 'An error occurred. Proceed with caution.',
       feeTotals,
-      status,
       quotes,
+      status,
     } = props
 
     const hasChildren = React.useMemo(

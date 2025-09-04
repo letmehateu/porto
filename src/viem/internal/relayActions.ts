@@ -15,7 +15,6 @@ import {
   type Calls,
   type Chain,
   type Client,
-  type GetChainParameter,
   type Narrow,
   type Transport,
   type ValueOf,
@@ -30,8 +29,51 @@ import {
 import * as RpcSchema from '../../core/internal/relay/rpcSchema.js'
 import * as Schema from '../../core/internal/schema/schema.js'
 import { CoderError } from '../../core/internal/schema/schema.js'
+import type { IsUndefined, OneOf } from '../../core/internal/types.js'
 import * as U from '../../core/internal/utils.js'
 import type { sendCalls } from '../RelayActions.js'
+import type { GetChainParameter } from './utils.js'
+
+/**
+ * Gets the authorization for a given address.
+ *
+ * @example
+ * TODO
+ *
+ * @param client - The client to use.
+ * @param parameters - Parameters.
+ * @returns Result.
+ */
+export async function getAuthorization(
+  client: Client,
+  parameters: getAuthorization.Parameters,
+): Promise<getAuthorization.ReturnType> {
+  try {
+    const method = 'wallet_getAuthorization' as const
+    type Schema = Extract<RpcSchema.Viem[number], { Method: typeof method }>
+    const result = await withCache(
+      () =>
+        client.request<Schema>({
+          method,
+          params: [
+            Schema.encodeSync(RpcSchema.wallet_getAuthorization.Parameters)(
+              parameters,
+            ),
+          ],
+        }),
+      { cacheKey: `${client.uid}.${method}.${parameters.address}` },
+    )
+    return Schema.decodeSync(RpcSchema.wallet_getAuthorization.Response)(result)
+  } catch (error) {
+    parseSchemaError(error)
+    throw error
+  }
+}
+
+export namespace getAuthorization {
+  export type Parameters = RpcSchema.wallet_getAuthorization.Parameters
+  export type ReturnType = RpcSchema.wallet_getAuthorization.Response
+}
 
 /**
  * Gets the capabilities for a given chain ID.
@@ -44,13 +86,18 @@ import type { sendCalls } from '../RelayActions.js'
  * @returns Result.
  */
 export async function getCapabilities<
-  const chainIds extends readonly number[] | undefined = undefined,
+  const chainIds extends 'all' | readonly number[] | undefined = undefined,
   const raw extends boolean = false,
 >(
-  client: Client,
+  client: Client<Transport>,
   options: getCapabilities.Options<chainIds, raw> = {},
 ): Promise<getCapabilities.ReturnType<chainIds, raw>> {
-  const { chainIds = [client.chain!.id] } = options
+  const chainIds = (() => {
+    if (options.chainId) return [options.chainId]
+    if (options.chainIds === 'all') return undefined
+    if (options.chainIds) return options.chainIds as readonly number[]
+    return [client.chain!.id]
+  })()
 
   try {
     const method = 'wallet_getCapabilities' as const
@@ -60,13 +107,15 @@ export async function getCapabilities<
         client.request<Schema>(
           {
             method,
-            params: [chainIds],
+            params: chainIds ? [chainIds] : undefined,
           },
           {
             retryCount: 0,
           },
         ),
-      { cacheKey: `${client.uid}.${method}.${chainIds.join(',')}` },
+      {
+        cacheKey: `${client.uid}.${method}.${chainIds?.join(',')}`,
+      },
     )
     const parsed = (() => {
       if (options.raw) return result as never
@@ -84,29 +133,38 @@ export async function getCapabilities<
 
 export namespace getCapabilities {
   export type Options<
-    chainIds extends readonly number[] | undefined = undefined,
+    chainIds extends 'all' | readonly number[] | undefined = undefined,
     raw extends boolean = false,
   > = {
-    /**
-     * Chain IDs to get capabilities for.
-     * @default [client.chain.id]
-     */
-    chainIds?: chainIds | readonly number[] | undefined
     /**
      * Whether to return the raw, non-decoded response.
      * @default false
      */
     raw?: raw | boolean | undefined
-  }
+  } & OneOf<
+    | {
+        /**
+         * Chain IDs to get the capabilities for.
+         * `"all"` will return the capabilities for all supported chains.
+         */
+        chainIds?: chainIds | 'all' | readonly number[] | undefined
+      }
+    | {
+        /**
+         * Chain ID to get the capabilities for.
+         */
+        chainId?: number | undefined
+      }
+  >
 
   export type ReturnType<
-    chainIds extends readonly number[] | undefined = undefined,
+    chainIds extends 'all' | readonly number[] | undefined = undefined,
     raw extends boolean = false,
     //
     value = raw extends true
       ? typeof RpcSchema.wallet_getCapabilities.Response.Encoded
       : RpcSchema.wallet_getCapabilities.Response,
-  > = chainIds extends undefined ? ValueOf<value> : value
+  > = IsUndefined<chainIds> extends true ? ValueOf<value> : value
 
   export type ErrorType = parseSchemaError.ErrorType | Errors.GlobalErrorType
 }
@@ -258,11 +316,11 @@ export namespace getCallsStatus {
  * @param parameters - Parameters.
  * @returns Result.
  */
-export async function getKeys<chain extends Chain | undefined>(
-  client: Client<Transport, chain>,
-  parameters: getKeys.Parameters<chain>,
+export async function getKeys(
+  client: Client,
+  parameters: getKeys.Parameters,
 ): Promise<getKeys.ReturnType> {
-  const { address, chain = client.chain } = parameters
+  const { address, chainIds } = parameters
 
   try {
     const method = 'wallet_getKeys' as const
@@ -272,7 +330,7 @@ export async function getKeys<chain extends Chain | undefined>(
       params: [
         Schema.encodeSync(RpcSchema.wallet_getKeys.Parameters)({
           address,
-          chainId: chain?.id!,
+          chainIds,
         }),
       ],
     })
@@ -284,9 +342,7 @@ export async function getKeys<chain extends Chain | undefined>(
 }
 
 export namespace getKeys {
-  export type Parameters<chain extends Chain | undefined = Chain | undefined> =
-    Omit<RpcSchema.wallet_getKeys.Parameters, 'chainId'> &
-      GetChainParameter<chain>
+  export type Parameters = RpcSchema.wallet_getKeys.Parameters
 
   export type ReturnType = RpcSchema.wallet_getKeys.Response
 

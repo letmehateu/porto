@@ -17,13 +17,13 @@ import * as RelayActions_internal from '../../../viem/internal/relayActions.js'
 import * as Key from '../../../viem/Key.js'
 import * as RelayActions from '../../../viem/RelayActions.js'
 import type { RelayClient } from '../../../viem/RelayClient.js'
-import * as Call from '../call.js'
-import * as FeeTokens from '../feeTokens.js'
+import * as Erc8010 from '../erc8010.js'
 import * as Mode from '../mode.js'
 import * as PermissionsRequest from '../permissionsRequest.js'
 import * as PreCalls from '../preCalls.js'
 import * as RequiredFunds from '../requiredFunds.js'
 import * as Siwe from '../siwe.js'
+import * as Tokens from '../tokens.js'
 import * as U from '../utils.js'
 
 /**
@@ -70,7 +70,7 @@ export function relay(parameters: relay.Parameters = {}) {
 
         const eoa = Account.fromPrivateKey(Secp256k1.randomPrivateKey())
 
-        const feeTokens = await FeeTokens.fetch(client, {
+        const feeTokens = await Tokens.resolveFeeTokens(client, {
           store: internal.store,
         })
 
@@ -117,8 +117,12 @@ export function relay(parameters: relay.Parameters = {}) {
           const signature = await Account.sign(eoa, {
             payload: PersonalMessage.getSignPayload(Hex.fromString(message)),
           })
+          const signature_erc8010 = await Erc8010.wrap(client, {
+            address: account.address,
+            signature,
+          })
 
-          return { message, signature }
+          return { message, signature: signature_erc8010 }
         })()
 
         return {
@@ -259,10 +263,13 @@ export function relay(parameters: relay.Parameters = {}) {
       },
 
       async getKeys(parameters) {
-        const { account, internal } = parameters
+        const { account, chainIds, internal } = parameters
         const { client } = internal
 
-        const keys = await RelayActions.getKeys(client, { account })
+        const keys = await RelayActions.getKeys(client, {
+          account,
+          chainIds,
+        })
 
         return U.uniqBy(
           [...keys, ...(account.keys ?? [])],
@@ -278,7 +285,7 @@ export function relay(parameters: relay.Parameters = {}) {
           chainId: client.chain.id,
         })
 
-        const [feeToken] = await FeeTokens.fetch(client, {
+        const [feeToken] = await Tokens.resolveFeeTokens(client, {
           addressOrSymbol: parameters.feeToken,
           store: internal.store,
         })
@@ -302,7 +309,7 @@ export function relay(parameters: relay.Parameters = {}) {
           config: { storage },
         } = internal
 
-        const feeTokens = await FeeTokens.fetch(client, {
+        const feeTokens = await Tokens.resolveFeeTokens(client, {
           store: internal.store,
         })
 
@@ -334,7 +341,7 @@ export function relay(parameters: relay.Parameters = {}) {
           config: { storage },
         } = internal
 
-        const feeTokens = await FeeTokens.fetch(client, {
+        const feeTokens = await Tokens.resolveFeeTokens(client, {
           store: internal.store,
         })
         const authorizeKey = await PermissionsRequest.toKey(permissions, {
@@ -419,7 +426,10 @@ export function relay(parameters: relay.Parameters = {}) {
             return { address, credentialId, webAuthnSignature }
           })()
 
-        const keys = await RelayActions.getKeys(client, { account: address })
+        const keys = await RelayActions.getKeys(client, {
+          account: address,
+          chainIds: [client.chain.id],
+        })
 
         // Instantiate the account based off the extracted address and keys.
         const account = Account.from({
@@ -465,6 +475,7 @@ export function relay(parameters: relay.Parameters = {}) {
           // Otherwise, we will sign over the digest for authorizing
           // the session key.
           return await Key.sign(adminKey, {
+            address: digestType === 'precall' ? null : account.address,
             payload: digest,
           })
         })()
@@ -483,19 +494,34 @@ export function relay(parameters: relay.Parameters = {}) {
         const signInWithEthereum_response = await (async () => {
           if (!signInWithEthereum) return undefined
 
-          if (digestType === 'siwe' && message && signature)
-            return { message, signature }
+          if (digestType === 'siwe' && message && signature) {
+            const signature_erc8010 = await Erc8010.wrap(client, {
+              address: account.address,
+              signature,
+            })
+            return { message, signature: signature_erc8010 }
+          }
 
-          const message_ = await Siwe.buildMessage(client, signInWithEthereum, {
-            address: account.address,
-          })
-
-          return {
-            message: message_,
-            signature: await Account.sign(account, {
-              payload: PersonalMessage.getSignPayload(Hex.fromString(message_)),
+          {
+            const message = await Siwe.buildMessage(
+              client,
+              signInWithEthereum,
+              {
+                address: account.address,
+              },
+            )
+            const signature = await Account.sign(account, {
+              payload: PersonalMessage.getSignPayload(Hex.fromString(message)),
               role: 'admin',
-            }),
+            })
+            const signature_erc8010 = await Erc8010.wrap(client, {
+              address: account.address,
+              signature,
+            })
+            return {
+              message,
+              signature: signature_erc8010,
+            }
           }
         })()
 
@@ -534,7 +560,7 @@ export function relay(parameters: relay.Parameters = {}) {
             storage,
           }))
 
-        const feeTokens = await FeeTokens.fetch(client, {
+        const feeTokens = await Tokens.resolveFeeTokens(client, {
           addressOrSymbol: parameters.feeToken,
           store: internal.store,
         })
@@ -584,7 +610,7 @@ export function relay(parameters: relay.Parameters = {}) {
         const { address, email, label, internal, permissions } = parameters
         const { client } = internal
 
-        const feeTokens = await FeeTokens.fetch(client, {
+        const feeTokens = await Tokens.resolveFeeTokens(client, {
           store: internal.store,
         })
 
@@ -635,7 +661,7 @@ export function relay(parameters: relay.Parameters = {}) {
           throw new Error('revoke the only WebAuthn key left.')
 
         try {
-          const [feeToken] = await FeeTokens.fetch(client, {
+          const [feeToken] = await Tokens.resolveFeeTokens(client, {
             addressOrSymbol: parameters.feeToken,
             store: internal.store,
           })
@@ -669,7 +695,7 @@ export function relay(parameters: relay.Parameters = {}) {
         if (key.role === 'admin') throw new Error('cannot revoke admins.')
 
         try {
-          const [feeToken] = await FeeTokens.fetch(client, {
+          const [feeToken] = await Tokens.resolveFeeTokens(client, {
             addressOrSymbol: parameters.feeToken,
             store: internal.store,
           })
@@ -716,7 +742,7 @@ export function relay(parameters: relay.Parameters = {}) {
           }))
 
         // Resolve fee token to use.
-        const feeTokens = await FeeTokens.fetch(client, {
+        const feeTokens = await Tokens.resolveFeeTokens(client, {
           addressOrSymbol: parameters.feeToken,
           store: internal.store,
         })
@@ -791,7 +817,8 @@ export function relay(parameters: relay.Parameters = {}) {
       },
 
       async signPersonalMessage(parameters) {
-        const { account, data } = parameters
+        const { account, data, internal } = parameters
+        const { client } = internal
 
         // Only admin keys can sign personal messages.
         const key = account.keys?.find(
@@ -804,11 +831,12 @@ export function relay(parameters: relay.Parameters = {}) {
           payload: PersonalMessage.getSignPayload(data),
         })
 
-        return signature
+        return Erc8010.wrap(client, { address: account.address, signature })
       },
 
       async signTypedData(parameters) {
-        const { account, data } = parameters
+        const { account, internal } = parameters
+        const { client } = internal
 
         // Only admin keys can sign typed data.
         const key = account.keys?.find(
@@ -816,46 +844,18 @@ export function relay(parameters: relay.Parameters = {}) {
         )
         if (!key) throw new Error('cannot find admin key to sign with.')
 
+        const data = Json.parse(parameters.data)
+        const isOrchestrator = data.domain?.name === 'Orchestrator'
         const signature = await Account.sign(account, {
           key,
-          payload: TypedData.getSignPayload(Json.parse(data)),
+          payload: TypedData.getSignPayload(data),
+          // If the domain is the Orchestrator, we don't need to replay-safe sign.
+          replaySafe: !isOrchestrator,
         })
 
-        return signature
-      },
-
-      async updateAccount(parameters) {
-        const { account, internal } = parameters
-        const {
-          client,
-          config: { storage: _ },
-        } = internal
-
-        const key = account.keys?.find(
-          (key) => key.role === 'admin' && key.privateKey,
-        )
-        if (!key) throw new Error('admin key not found.')
-
-        const { contracts } = await RelayActions.getCapabilities(client)
-        const { accountImplementation } = contracts
-        if (!accountImplementation)
-          throw new Error('accountImplementation not found.')
-
-        const [feeToken] = await FeeTokens.fetch(client, {
-          store: internal.store,
-        })
-
-        return await RelayActions.sendCalls(client, {
-          account,
-          calls: [
-            Call.upgradeProxyAccount({
-              address: accountImplementation.address,
-              to: account.address,
-            }),
-          ],
-          feeToken: feeToken.address,
-          key,
-        })
+        return isOrchestrator
+          ? signature
+          : Erc8010.wrap(client, { address: account.address, signature })
       },
 
       async upgradeAccount(parameters) {
@@ -967,6 +967,7 @@ async function getAuthorizeKeyPreCalls(
     preCalls: true,
   })
   const signature = await Key.sign(adminKey, {
+    address: null,
     payload: digest,
   })
 

@@ -17,8 +17,8 @@ import * as Permissions from '../permissions.js'
 import * as PermissionsRequest from '../permissionsRequest.js'
 import type * as Porto from '../porto.js'
 import * as PreCalls from '../preCalls.js'
-import type * as FeeToken from '../schema/feeToken.js'
 import * as Schema from '../schema/schema.js'
+import type * as Token from '../schema/token.js'
 import * as Siwe from '../siwe.js'
 import * as U from '../utils.js'
 import { relay } from './relay.js'
@@ -347,7 +347,7 @@ export function dialog(parameters: dialog.Parameters = {}) {
       },
 
       async getKeys(parameters) {
-        const { account, internal } = parameters
+        const { account, chainIds, internal } = parameters
         const { store } = internal
 
         const keys = await (async () => {
@@ -358,9 +358,10 @@ export function dialog(parameters: dialog.Parameters = {}) {
           const result = await provider.request({
             method: 'wallet_getKeys',
             params: [
-              {
+              Schema.encodeSync(RpcSchema_porto.wallet_getKeys.Parameters)({
                 address: account.address,
-              },
+                chainIds,
+              }),
             ],
           })
 
@@ -836,6 +837,7 @@ export function dialog(parameters: dialog.Parameters = {}) {
             if (hasFeeDeficit) throw new Error('insufficient funds')
 
             const signature = await Key.sign(key, {
+              address: null,
               payload: req.digest,
               wrap: false,
             })
@@ -1009,17 +1011,6 @@ export function dialog(parameters: dialog.Parameters = {}) {
         return await provider.request(request)
       },
 
-      async updateAccount(parameters) {
-        const { internal } = parameters
-        const { store, request } = internal
-
-        if (request.method !== 'wallet_updateAccount')
-          throw new Error('Cannot update account for method: ' + request.method)
-
-        const provider = getProvider(store)
-        return await provider.request(request)
-      },
-
       async upgradeAccount(parameters) {
         const { account, internal } = parameters
         const { store, request } = internal
@@ -1115,7 +1106,7 @@ export declare namespace dialog {
 export async function resolveFeeToken(
   internal: Mode.ActionsInternal,
   parameters?: {
-    feeToken?: FeeToken.Symbol | Address.Address | undefined
+    feeToken?: Token.Symbol | Address.Address | undefined
   },
 ) {
   const {

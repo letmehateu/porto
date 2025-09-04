@@ -10,6 +10,7 @@ import { sendCalls } from '../RelayActions.js'
 import {
   addFaucetFunds,
   getAssets,
+  getAuthorization,
   getCallsStatus,
   getCapabilities,
   getKeys,
@@ -67,6 +68,32 @@ describe('health', () => {
   test('default', async () => {
     const version = await health(client)
     expect(version).toBeDefined()
+  })
+})
+
+describe('getAuthorization', () => {
+  test('default', async () => {
+    const key = Key.createHeadlessWebAuthnP256()
+    const account = await TestActions.createAccount(client, {
+      keys: [key],
+    })
+
+    const result = await getAuthorization(client, {
+      address: account.address,
+    })
+
+    expect(result).toBeDefined()
+    expect(result.authorization).toBeDefined()
+    expect(result.data).toBeDefined()
+    expect(result.to).toBeDefined()
+  })
+
+  test('behavior: undelegated', async () => {
+    await expect(
+      getAuthorization(client, {
+        address: Hex.random(20),
+      }),
+    ).rejects.toThrow('does not exist in storage')
   })
 })
 
@@ -267,9 +294,43 @@ describe('getCapabilities', () => {
     expect(result.fees.tokens).toBeDefined()
   })
 
+  test('behavior: chainId', async () => {
+    const result = await getCapabilities(client, {
+      chainId: client.chain.id,
+    })
+
+    expect(result.contracts.accountImplementation).toBeDefined()
+    expect(result.contracts.accountProxy).toBeDefined()
+    expect(result.contracts.orchestrator).toBeDefined()
+    expect(result.contracts.simulator).toBeDefined()
+    expect(result.fees.quoteConfig).toBeDefined()
+    expect(result.fees.recipient).toBeDefined()
+    expect(result.fees.tokens).toBeDefined()
+  })
+
   test('behavior: chainIds', async () => {
     const result = await getCapabilities(client, {
       chainIds: [client.chain.id],
+    })
+
+    const keys = Object.keys(result)
+    expect(keys.length).toBeGreaterThan(0)
+
+    for (const key of keys) {
+      const capabilities = (result as any)[key]
+      expect(capabilities.contracts.accountImplementation).toBeDefined()
+      expect(capabilities.contracts.accountProxy).toBeDefined()
+      expect(capabilities.contracts.orchestrator).toBeDefined()
+      expect(capabilities.contracts.simulator).toBeDefined()
+      expect(capabilities.fees.quoteConfig).toBeDefined()
+      expect(capabilities.fees.recipient).toBeDefined()
+      expect(capabilities.fees.tokens).toBeDefined()
+    }
+  })
+
+  test('behavior: chainIds (all)', async () => {
+    const result = await getCapabilities(client, {
+      chainIds: 'all',
     })
 
     const keys = Object.keys(result)
@@ -316,6 +377,7 @@ describe('getCallsStatus', () => {
     })
 
     const signature = await Key.sign(key, {
+      address: null,
       payload: request.digest,
       wrap: false,
     })
@@ -349,7 +411,7 @@ describe('getKeys', () => {
 
     const result = await getKeys(client, {
       address: account.address,
-    })
+    }).then((result) => result[Hex.fromNumber(client.chain.id)]!)
 
     expect(result[0]?.hash).toBe(key.hash)
     expect(result[0]?.publicKey).toBe(key.publicKey)
@@ -366,7 +428,7 @@ describe('getKeys', () => {
 
     const result = await getKeys(client, {
       address: account.address,
-    })
+    }).then((result) => result[Hex.fromNumber(client.chain.id)]!)
 
     expect(result[0]?.hash).toBe(key.hash)
     expect(result[0]?.publicKey).toBe(key.publicKey)
@@ -392,7 +454,7 @@ describe('getKeys', () => {
 
     const result = await getKeys(client, {
       address: account.address,
-    })
+    }).then((result) => result[Hex.fromNumber(client.chain.id)]!)
 
     expect(result[0]?.hash).toBe(key.hash)
     expect(result[0]?.publicKey).toBe(key.publicKey)
@@ -436,7 +498,7 @@ describe('getKeys', () => {
 
     const result = await getKeys(client, {
       address: account.address,
-    })
+    }).then((result) => result[Hex.fromNumber(client.chain.id)]!)
 
     expect(result[0]?.hash).toBe(key.hash)
     expect(result[0]?.publicKey).toBe(key.publicKey)
@@ -481,6 +543,7 @@ describe('prepareCalls + sendPreparedCalls', () => {
     })
 
     const signature = await Key.sign(key, {
+      address: null,
       payload: request.digest,
       wrap: false,
     })
@@ -541,10 +604,12 @@ describe('prepareCalls + sendPreparedCalls', () => {
     })
 
     const signature = await Key.sign(userKey, {
+      address: null,
       payload: request.digest,
       wrap: false,
     })
     const merchantSignature = await Key.sign(merchantKey, {
+      address: null,
       payload: request.digest,
     })
 
@@ -638,6 +703,7 @@ describe('prepareCalls + sendPreparedCalls', () => {
       })
 
       const signature = await Key.sign(key, {
+        address: null,
         payload: request.digest,
         wrap: false,
       })
@@ -724,6 +790,7 @@ describe('prepareCalls + sendPreparedCalls', () => {
       })
 
       const signature = await Key.sign(key, {
+        address: null,
         payload: request.digest,
         wrap: false,
       })
@@ -791,6 +858,7 @@ describe('prepareCalls + sendPreparedCalls', () => {
     })
 
     const signature = await Key.sign(key, {
+      address: null,
       payload: request.digest,
       wrap: false,
     })
@@ -928,7 +996,7 @@ describe('prepareUpgradeAccount + upgradeAccount', () => {
     // Relay should have registered the keys.
     const keys = await getKeys(client, {
       address: eoa.address,
-    })
+    }).then((result) => result[Hex.fromNumber(client.chain.id)]!)
     expect(keys.length).toBe(1)
 
     // Perform a call to deploy the account.
@@ -1013,7 +1081,7 @@ describe('prepareUpgradeAccount + upgradeAccount', () => {
     // Relay should have registered the keys.
     const keys = await getKeys(client, {
       address: eoa.address,
-    })
+    }).then((result) => result[Hex.fromNumber(client.chain.id)]!)
     expect(keys.length).toBe(2)
 
     // Perform a call to deploy the account.
@@ -1119,7 +1187,7 @@ describe('prepareUpgradeAccount + upgradeAccount', () => {
     // Relay should have registered the keys.
     const keys = await getKeys(client, {
       address: eoa.address,
-    })
+    }).then((result) => result[Hex.fromNumber(client.chain.id)]!)
     expect(keys.length).toBe(2)
 
     // Perform a call to deploy the account.
@@ -1230,6 +1298,7 @@ describe.runIf(!Anvil.enabled)('verifySignature', () => {
 
     {
       const signature = await Key.sign(key1, {
+        address: account.address,
         payload: digest,
         wrap: false,
       })
@@ -1245,6 +1314,7 @@ describe.runIf(!Anvil.enabled)('verifySignature', () => {
 
     {
       const signature = await Key.sign(key2, {
+        address: account.address,
         payload: digest,
         wrap: false,
       })
@@ -1266,8 +1336,8 @@ describe.runIf(!Anvil.enabled)('verifySignature', () => {
     })
 
     const digest = Hex.random(32)
-
     const signature = await Key.sign(key, {
+      address: account.address,
       payload: digest,
       wrap: false,
     })
