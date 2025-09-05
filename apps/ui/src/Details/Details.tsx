@@ -28,10 +28,11 @@ export function Details({
       </div>
     )
 
-  const rows = Children.count(children)
+  const rows = Children.toArray(children)
+
   const expandedHeight =
-    rows * 18 + // row height
-    (rows - 1) * 6 + // row gap
+    rows.length * 18 + // row height
+    (rows.length - 1) * 6 + // row gap
     16 // vertical padding
 
   const { height } = useSpring({

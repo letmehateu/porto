@@ -1,23 +1,21 @@
-import { ChainIcon } from '@porto/apps/components'
 import { Button, Details, Spinner, TokenIcon } from '@porto/ui'
 import { a, useTransition } from '@react-spring/web'
 import { Value } from 'ox'
 import type * as Capabilities from 'porto/core/internal/relay/schema/capabilities'
-import { Hooks } from 'porto/remote'
 import * as React from 'react'
-import { erc20Abi } from 'viem'
+import { type Chain, erc20Abi } from 'viem'
 import { useReadContracts } from 'wagmi'
 import { CopyButton } from '~/components/CopyButton'
-import { porto } from '~/lib/Porto'
 import { PriceFormatter, StringFormatter } from '~/utils'
 import LucideLockKeyholeOpen from '~icons/lucide/lock-keyhole-open'
+import { ActionRequest } from './ActionRequest'
 import { Layout } from './Layout'
 
 export function Approve(props: Approve.Props) {
   const {
     amount,
     approving,
-    chainId,
+    chainsPath,
     expiresAt,
     fees,
     loading,
@@ -28,31 +26,22 @@ export function Approve(props: Approve.Props) {
     unlimited,
   } = props
 
-  const { feeTotalFormatted, feeTotalFormattedFull } = React.useMemo(() => {
-    if (!fees)
-      return {
-        feeTotalFormatted: undefined,
-        feeTotalFormattedFull: undefined,
-      }
-    const feeTotal = fees['0x0']?.value
-    if (!feeTotal)
-      return {
-        feeTotalFormatted: undefined,
-        feeTotalFormattedFull: undefined,
-      }
+  const feeFormatted = React.useMemo(() => {
+    const feeTotal = fees?.['0x0']?.value
+    if (!feeTotal) return null
     const feeNumber = Number(feeTotal)
     return {
-      feeTotalFormatted: PriceFormatter.format(feeNumber),
-      feeTotalFormattedFull: new Intl.NumberFormat('en-US', {
+      full: new Intl.NumberFormat('en-US', {
         currency: 'USD',
         maximumFractionDigits: 8,
         minimumFractionDigits: 2,
         style: 'currency',
       }).format(feeNumber),
+      short: PriceFormatter.format(feeNumber),
     }
   }, [fees])
 
-  const chain = Hooks.useChain(porto, { chainId })
+  const chainId = chainsPath[0]?.id
 
   const tokenResult = useReadContracts({
     allowFailure: false,
@@ -117,23 +106,15 @@ export function Approve(props: Approve.Props) {
                 <CopyButton value={spender} />
               </div>
             </div>
-            {feeTotalFormatted && (
+            {feeFormatted && (
               <div className="flex h-[18px] items-center justify-between text-[14px]">
                 <div className="text-th_base-secondary">Fees (est.)</div>
-                <div className="font-medium" title={feeTotalFormattedFull}>
-                  {feeTotalFormatted}
+                <div className="font-medium" title={feeFormatted.full}>
+                  {feeFormatted.short}
                 </div>
               </div>
             )}
-            {chain && (
-              <div className="flex h-[18px] items-center justify-between text-[14px]">
-                <span className="text-th_base-secondary">Network</span>
-                <div className="flex items-center gap-[6px]">
-                  <ChainIcon chainId={chain.id} />
-                  <span className="font-medium">{chain.name}</span>
-                </div>
-              </div>
-            )}
+            <ActionRequest.ChainsPath chainsPath={chainsPath} />
           </Details>
         </div>
       </Layout.Content>
@@ -167,7 +148,7 @@ export namespace Approve {
   export type Props = {
     amount: bigint
     approving?: boolean | undefined
-    chainId?: number | undefined
+    chainsPath: readonly Chain[]
     expiresAt?: Date
     fees?: Capabilities.feeTotals.Response | undefined
     loading?: boolean | undefined
