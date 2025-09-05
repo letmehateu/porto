@@ -48,7 +48,7 @@ verifyApp.get('/', async (context) => {
 
 const extraConfig = {
   blacklist: [],
-  whitelist: [hostnames],
+  whitelist: hostnames,
 } as const
 
 export { verifyApp }
