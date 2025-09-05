@@ -190,12 +190,12 @@ export function ActionRequest(props: ActionRequest.Props) {
                   onClick={onReject}
                   variant="negative-secondary"
                 >
-                  {prepareCallsQuery.isError ? 'Cancel' : 'Deny'}
+                  Cancel
                 </Button>
                 <Button
                   data-testid="confirm"
                   disabled={!prepareCallsQuery.isSuccess}
-                  loading={loading && 'Sending…'}
+                  loading={loading && 'Confirming…'}
                   onClick={() => {
                     if (prepareCallsQuery.isError) {
                       prepareCallsQuery.refetch()
@@ -207,7 +207,7 @@ export function ActionRequest(props: ActionRequest.Props) {
                   variant={prepareCallsQuery.isError ? 'primary' : 'positive'}
                   width="grow"
                 >
-                  {prepareCallsQuery.isError ? 'Retry' : 'Approve'}
+                  {prepareCallsQuery.isError ? 'Retry' : 'Confirm'}
                 </Button>
               </Layout.Footer.Actions>
 
