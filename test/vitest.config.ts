@@ -44,15 +44,6 @@ export default defineConfig(({ mode }) => {
             hookTimeout: 20_000,
             include: ['src/**/*.test.ts'],
             name: 'default',
-            poolOptions:
-              env.VITE_DEFAULT_ENV !== 'anvil'
-                ? {
-                    forks: {
-                      maxForks: 1,
-                      singleFork: true,
-                    },
-                  }
-                : {},
             retry: 3,
             setupFiles: [join(__dirname, './setup.ts')],
             testTimeout: 30_000,
