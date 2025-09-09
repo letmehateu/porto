@@ -1523,9 +1523,6 @@ importers:
       mipd:
         specifier: ^0.0.7
         version: 0.0.7(typescript@5.8.3)
-      open:
-        specifier: ^10.1.0
-        version: 10.1.2
       ox:
         specifier: ^0.9.3
         version: 0.9.3(typescript@5.8.3)(zod@3.25.28)

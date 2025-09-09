@@ -1,4 +1,3 @@
-import open from 'open'
 import * as Dialog from '../core/Dialog.js'
 import * as Messenger from './Messenger.js'
 
@@ -39,7 +38,8 @@ export async function cli() {
           const host = parameters.host.replace(/\/$/, '')
           const url = host + '/?' + search.toString()
 
-          open(url)
+          console.log('\n\nOpen the URL below in your browser to continue:')
+          console.log(`\n${url}\n`)
 
           isOpen = true
         },
