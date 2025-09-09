@@ -85,6 +85,7 @@ export function relay(parameters: relay.Parameters = {}) {
             })
           : Key.createHeadlessWebAuthnP256()
         const sessionKey = await PermissionsRequest.toKey(permissions, {
+          chainId: client.chain.id,
           feeTokens,
         })
 
