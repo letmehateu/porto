@@ -377,10 +377,9 @@ export function iframe(options: iframe.Options = {}) {
             return secure
           })()
           const intersectionObserverSupported = IO.supported()
-          const trustedHost =
-            // If IntersectionObserver is supported, Porto dialog will handle a visibility check.
-            // If the host is in the trusted hosts list, we will trust the host will not occlude the iframe.
-            Boolean(trustedHosts?.includes(hostUrl.hostname))
+          const trustedHost = Boolean(
+            trustedHosts?.includes(window.location.hostname),
+          )
 
           const secureFrame = Boolean(
             intersectionObserverSupported || trustedHost,
