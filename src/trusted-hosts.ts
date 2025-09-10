@@ -18,4 +18,5 @@ export const hostnames = [
   'uniswap.org',
   'jumper.exchange',
   'playground.li.fi',
+  'happypath.enso.build',
 ]
