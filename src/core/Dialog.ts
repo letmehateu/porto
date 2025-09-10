@@ -386,7 +386,7 @@ export function iframe(options: iframe.Options = {}) {
           )
 
           if (!secureFrame)
-            console.warn(
+            logger.warnOnce(
               [
                 `Warning: Browser does not support IntersectionObserver v2 or host "${hostUrl.hostname}" is not trusted by Porto.`,
                 'This may result in the dialog falling back to a popup.',
