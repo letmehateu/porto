@@ -772,7 +772,7 @@ describe('Request', () => {
       [Schema.CoderError: Expected a number greater than or equal to 1, actual 0
       Path: expiry
 
-      Details: { readonly address?: \`0x\${string}\` | undefined; readonly chainId?: (\`0x\${string}\` <-> number) | undefined; readonly expiry: greaterThanOrEqualTo(1); readonly feeToken: { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z]+$ | undefined } | null; readonly key?: { readonly publicKey: \`0x\${string}\`; readonly type: "address" | "p256" | "secp256k1" | "webauthn-p256" } | undefined; readonly permissions: { readonly calls: minItems(1); readonly signatureVerification?: { readonly addresses: ReadonlyArray<\`0x\${string}\`> } | undefined; readonly spend?: ReadonlyArray<{ readonly limit: (\`0x\${string}\` <-> bigint); readonly period: "minute" | "hour" | "day" | "week" | "month" | "year"; readonly token?: \`0x\${string}\` | undefined }> | undefined } }
+      Details: { readonly address?: \`0x\${string}\` | undefined; readonly chainId?: (\`0x\${string}\` <-> number) | undefined; readonly expiry: greaterThanOrEqualTo(1); readonly feeToken: { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z0-9]+$ | undefined } | null; readonly key?: { readonly publicKey: \`0x\${string}\`; readonly type: "address" | "p256" | "secp256k1" | "webauthn-p256" } | undefined; readonly permissions: { readonly calls: minItems(1); readonly signatureVerification?: { readonly addresses: ReadonlyArray<\`0x\${string}\`> } | undefined; readonly spend?: ReadonlyArray<{ readonly limit: (\`0x\${string}\` <-> bigint); readonly period: "minute" | "hour" | "day" | "week" | "month" | "year"; readonly token?: \`0x\${string}\` | undefined }> | undefined } }
       └─ ["expiry"]
          └─ greaterThanOrEqualTo(1)
             └─ Predicate refinement failure
@@ -797,7 +797,7 @@ describe('Request', () => {
       [Schema.CoderError: Expected a number greater than or equal to 1, actual -1
       Path: expiry
 
-      Details: { readonly address?: \`0x\${string}\` | undefined; readonly chainId?: (\`0x\${string}\` <-> number) | undefined; readonly expiry: greaterThanOrEqualTo(1); readonly feeToken: { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z]+$ | undefined } | null; readonly key?: { readonly publicKey: \`0x\${string}\`; readonly type: "address" | "p256" | "secp256k1" | "webauthn-p256" } | undefined; readonly permissions: { readonly calls: minItems(1); readonly signatureVerification?: { readonly addresses: ReadonlyArray<\`0x\${string}\`> } | undefined; readonly spend?: ReadonlyArray<{ readonly limit: (\`0x\${string}\` <-> bigint); readonly period: "minute" | "hour" | "day" | "week" | "month" | "year"; readonly token?: \`0x\${string}\` | undefined }> | undefined } }
+      Details: { readonly address?: \`0x\${string}\` | undefined; readonly chainId?: (\`0x\${string}\` <-> number) | undefined; readonly expiry: greaterThanOrEqualTo(1); readonly feeToken: { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z0-9]+$ | undefined } | null; readonly key?: { readonly publicKey: \`0x\${string}\`; readonly type: "address" | "p256" | "secp256k1" | "webauthn-p256" } | undefined; readonly permissions: { readonly calls: minItems(1); readonly signatureVerification?: { readonly addresses: ReadonlyArray<\`0x\${string}\`> } | undefined; readonly spend?: ReadonlyArray<{ readonly limit: (\`0x\${string}\` <-> bigint); readonly period: "minute" | "hour" | "day" | "week" | "month" | "year"; readonly token?: \`0x\${string}\` | undefined }> | undefined } }
       └─ ["expiry"]
          └─ greaterThanOrEqualTo(1)
             └─ Predicate refinement failure
@@ -819,7 +819,7 @@ describe('Request', () => {
       [Schema.CoderError: \`permissions\` is missing
       Path: permissions
 
-      Details: { readonly address?: \`0x\${string}\` | undefined; readonly chainId?: (\`0x\${string}\` <-> number) | undefined; readonly expiry: greaterThanOrEqualTo(1); readonly feeToken: { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z]+$ | undefined } | null; readonly key?: { readonly publicKey: \`0x\${string}\`; readonly type: "address" | "p256" | "secp256k1" | "webauthn-p256" } | undefined; readonly permissions: { readonly calls: minItems(1); readonly signatureVerification?: { readonly addresses: ReadonlyArray<\`0x\${string}\`> } | undefined; readonly spend?: ReadonlyArray<{ readonly limit: (\`0x\${string}\` <-> bigint); readonly period: "minute" | "hour" | "day" | "week" | "month" | "year"; readonly token?: \`0x\${string}\` | undefined }> | undefined } }
+      Details: { readonly address?: \`0x\${string}\` | undefined; readonly chainId?: (\`0x\${string}\` <-> number) | undefined; readonly expiry: greaterThanOrEqualTo(1); readonly feeToken: { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z0-9]+$ | undefined } | null; readonly key?: { readonly publicKey: \`0x\${string}\`; readonly type: "address" | "p256" | "secp256k1" | "webauthn-p256" } | undefined; readonly permissions: { readonly calls: minItems(1); readonly signatureVerification?: { readonly addresses: ReadonlyArray<\`0x\${string}\`> } | undefined; readonly spend?: ReadonlyArray<{ readonly limit: (\`0x\${string}\` <-> bigint); readonly period: "minute" | "hour" | "day" | "week" | "month" | "year"; readonly token?: \`0x\${string}\` | undefined }> | undefined } }
       └─ ["permissions"]
          └─ is missing]
     `)
@@ -852,7 +852,7 @@ describe('Request', () => {
       [Schema.CoderError: Expected "minute", actual "invalid-period"
       Path: permissions.spend.0.period
 
-      Details: { readonly address?: \`0x\${string}\` | undefined; readonly chainId?: (\`0x\${string}\` <-> number) | undefined; readonly expiry: greaterThanOrEqualTo(1); readonly feeToken: { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z]+$ | undefined } | null; readonly key?: { readonly publicKey: \`0x\${string}\`; readonly type: "address" | "p256" | "secp256k1" | "webauthn-p256" } | undefined; readonly permissions: { readonly calls: minItems(1); readonly signatureVerification?: { readonly addresses: ReadonlyArray<\`0x\${string}\`> } | undefined; readonly spend?: ReadonlyArray<{ readonly limit: (\`0x\${string}\` <-> bigint); readonly period: "minute" | "hour" | "day" | "week" | "month" | "year"; readonly token?: \`0x\${string}\` | undefined }> | undefined } }
+      Details: { readonly address?: \`0x\${string}\` | undefined; readonly chainId?: (\`0x\${string}\` <-> number) | undefined; readonly expiry: greaterThanOrEqualTo(1); readonly feeToken: { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z0-9]+$ | undefined } | null; readonly key?: { readonly publicKey: \`0x\${string}\`; readonly type: "address" | "p256" | "secp256k1" | "webauthn-p256" } | undefined; readonly permissions: { readonly calls: minItems(1); readonly signatureVerification?: { readonly addresses: ReadonlyArray<\`0x\${string}\`> } | undefined; readonly spend?: ReadonlyArray<{ readonly limit: (\`0x\${string}\` <-> bigint); readonly period: "minute" | "hour" | "day" | "week" | "month" | "year"; readonly token?: \`0x\${string}\` | undefined }> | undefined } }
       └─ ["permissions"]
          └─ { readonly calls: minItems(1); readonly signatureVerification?: { readonly addresses: ReadonlyArray<\`0x\${string}\`> } | undefined; readonly spend?: ReadonlyArray<{ readonly limit: (\`0x\${string}\` <-> bigint); readonly period: "minute" | "hour" | "day" | "week" | "month" | "year"; readonly token?: \`0x\${string}\` | undefined }> | undefined }
             └─ ["spend"]
@@ -893,17 +893,17 @@ describe('Request', () => {
       [Schema.CoderError: Expected "native", actual "0x0000000000000000000000000000000000000000"
       Path: feeToken.symbol
 
-      Details: { readonly address?: \`0x\${string}\` | undefined; readonly chainId?: (\`0x\${string}\` <-> number) | undefined; readonly expiry: greaterThanOrEqualTo(1); readonly feeToken: { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z]+$ | undefined } | null; readonly key?: { readonly publicKey: \`0x\${string}\`; readonly type: "address" | "p256" | "secp256k1" | "webauthn-p256" } | undefined; readonly permissions: { readonly calls: minItems(1); readonly signatureVerification?: { readonly addresses: ReadonlyArray<\`0x\${string}\`> } | undefined; readonly spend?: ReadonlyArray<{ readonly limit: (\`0x\${string}\` <-> bigint); readonly period: "minute" | "hour" | "day" | "week" | "month" | "year"; readonly token?: \`0x\${string}\` | undefined }> | undefined } }
+      Details: { readonly address?: \`0x\${string}\` | undefined; readonly chainId?: (\`0x\${string}\` <-> number) | undefined; readonly expiry: greaterThanOrEqualTo(1); readonly feeToken: { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z0-9]+$ | undefined } | null; readonly key?: { readonly publicKey: \`0x\${string}\`; readonly type: "address" | "p256" | "secp256k1" | "webauthn-p256" } | undefined; readonly permissions: { readonly calls: minItems(1); readonly signatureVerification?: { readonly addresses: ReadonlyArray<\`0x\${string}\`> } | undefined; readonly spend?: ReadonlyArray<{ readonly limit: (\`0x\${string}\` <-> bigint); readonly period: "minute" | "hour" | "day" | "week" | "month" | "year"; readonly token?: \`0x\${string}\` | undefined }> | undefined } }
       └─ ["feeToken"]
-         └─ { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z]+$ | undefined } | null
-            ├─ { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z]+$ | undefined }
+         └─ { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z0-9]+$ | undefined } | null
+            ├─ { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z0-9]+$ | undefined }
             │  └─ ["symbol"]
-            │     └─ "native" | a string matching the pattern ^[A-Z]+$ | undefined
-            │        ├─ "native" | a string matching the pattern ^[A-Z]+$
+            │     └─ "native" | a string matching the pattern ^[A-Z0-9]+$ | undefined
+            │        ├─ "native" | a string matching the pattern ^[A-Z0-9]+$
             │        │  ├─ Expected "native", actual "0x0000000000000000000000000000000000000000"
-            │        │  └─ a string matching the pattern ^[A-Z]+$
+            │        │  └─ a string matching the pattern ^[A-Z0-9]+$
             │        │     └─ Predicate refinement failure
-            │        │        └─ Expected a string matching the pattern ^[A-Z]+$, actual "0x0000000000000000000000000000000000000000"
+            │        │        └─ Expected a string matching the pattern ^[A-Z0-9]+$, actual "0x0000000000000000000000000000000000000000"
             │        └─ Expected undefined, actual "0x0000000000000000000000000000000000000000"
             └─ Expected null, actual {"limit":"1","symbol":"0x0000000000000000000000000000000000000000"}]
     `)
@@ -930,10 +930,10 @@ describe('Request', () => {
       [Schema.CoderError: Expected \`\${number}.\${number}\`, actual "invalid-number"
       Path: feeToken.limit
 
-      Details: { readonly address?: \`0x\${string}\` | undefined; readonly chainId?: (\`0x\${string}\` <-> number) | undefined; readonly expiry: greaterThanOrEqualTo(1); readonly feeToken: { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z]+$ | undefined } | null; readonly key?: { readonly publicKey: \`0x\${string}\`; readonly type: "address" | "p256" | "secp256k1" | "webauthn-p256" } | undefined; readonly permissions: { readonly calls: minItems(1); readonly signatureVerification?: { readonly addresses: ReadonlyArray<\`0x\${string}\`> } | undefined; readonly spend?: ReadonlyArray<{ readonly limit: (\`0x\${string}\` <-> bigint); readonly period: "minute" | "hour" | "day" | "week" | "month" | "year"; readonly token?: \`0x\${string}\` | undefined }> | undefined } }
+      Details: { readonly address?: \`0x\${string}\` | undefined; readonly chainId?: (\`0x\${string}\` <-> number) | undefined; readonly expiry: greaterThanOrEqualTo(1); readonly feeToken: { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z0-9]+$ | undefined } | null; readonly key?: { readonly publicKey: \`0x\${string}\`; readonly type: "address" | "p256" | "secp256k1" | "webauthn-p256" } | undefined; readonly permissions: { readonly calls: minItems(1); readonly signatureVerification?: { readonly addresses: ReadonlyArray<\`0x\${string}\`> } | undefined; readonly spend?: ReadonlyArray<{ readonly limit: (\`0x\${string}\` <-> bigint); readonly period: "minute" | "hour" | "day" | "week" | "month" | "year"; readonly token?: \`0x\${string}\` | undefined }> | undefined } }
       └─ ["feeToken"]
-         └─ { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z]+$ | undefined } | null
-            ├─ { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z]+$ | undefined }
+         └─ { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z0-9]+$ | undefined } | null
+            ├─ { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z0-9]+$ | undefined }
             │  └─ ["limit"]
             │     └─ a string matching the pattern ^\\d+(\\.\\d+)?$
             │        └─ From side refinement failure
@@ -965,10 +965,10 @@ describe('Request', () => {
       [Schema.CoderError: Expected a string matching the pattern ^\\d+(\\.\\d+)?$, actual "1.5.0"
       Path: feeToken.limit
 
-      Details: { readonly address?: \`0x\${string}\` | undefined; readonly chainId?: (\`0x\${string}\` <-> number) | undefined; readonly expiry: greaterThanOrEqualTo(1); readonly feeToken: { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z]+$ | undefined } | null; readonly key?: { readonly publicKey: \`0x\${string}\`; readonly type: "address" | "p256" | "secp256k1" | "webauthn-p256" } | undefined; readonly permissions: { readonly calls: minItems(1); readonly signatureVerification?: { readonly addresses: ReadonlyArray<\`0x\${string}\`> } | undefined; readonly spend?: ReadonlyArray<{ readonly limit: (\`0x\${string}\` <-> bigint); readonly period: "minute" | "hour" | "day" | "week" | "month" | "year"; readonly token?: \`0x\${string}\` | undefined }> | undefined } }
+      Details: { readonly address?: \`0x\${string}\` | undefined; readonly chainId?: (\`0x\${string}\` <-> number) | undefined; readonly expiry: greaterThanOrEqualTo(1); readonly feeToken: { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z0-9]+$ | undefined } | null; readonly key?: { readonly publicKey: \`0x\${string}\`; readonly type: "address" | "p256" | "secp256k1" | "webauthn-p256" } | undefined; readonly permissions: { readonly calls: minItems(1); readonly signatureVerification?: { readonly addresses: ReadonlyArray<\`0x\${string}\`> } | undefined; readonly spend?: ReadonlyArray<{ readonly limit: (\`0x\${string}\` <-> bigint); readonly period: "minute" | "hour" | "day" | "week" | "month" | "year"; readonly token?: \`0x\${string}\` | undefined }> | undefined } }
       └─ ["feeToken"]
-         └─ { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z]+$ | undefined } | null
-            ├─ { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z]+$ | undefined }
+         └─ { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z0-9]+$ | undefined } | null
+            ├─ { readonly limit: a string matching the pattern ^\\d+(\\.\\d+)?$; readonly symbol?: "native" | a string matching the pattern ^[A-Z0-9]+$ | undefined }
             │  └─ ["limit"]
             │     └─ a string matching the pattern ^\\d+(\\.\\d+)?$
             │        └─ Predicate refinement failure
