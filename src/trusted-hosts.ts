@@ -20,5 +20,5 @@ export const hostnames = [
   'playground.li.fi',
   'happypath.enso.build',
   'app.ens.domains',
-  'www.bungee.exchange'
+  'www.bungee.exchange',
 ]
