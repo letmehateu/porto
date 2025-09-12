@@ -14,9 +14,10 @@ import {
   withRetry,
 } from 'viem'
 import type * as Chains from '../core/Chains.js'
+import * as Schema from '../core/internal/schema/schema.js'
 import type { ExactPartial } from '../core/internal/types.js'
 import type * as Porto from '../core/Porto.js'
-import type * as RpcSchema from '../core/RpcSchema.js'
+import * as RpcSchema from '../core/RpcSchema.js'
 
 export function porto<
   const chains extends readonly [Chains.Chain, ...Chains.Chain[]],
@@ -47,10 +48,6 @@ export function porto<
     })()
 
     let porto_promise: Promise<Porto.Porto<chains>> | undefined
-    let Schema_promise: Promise<
-      typeof import('../core/internal/schema/schema.js')
-    >
-    let RpcSchema_promise: Promise<typeof import('../core/RpcSchema.js')>
 
     let accountsChanged: Connector['onAccountsChanged'] | undefined
     let chainChanged: Connector['onChainChanged'] | undefined
@@ -79,14 +76,6 @@ export function porto<
         }
 
         const provider = (await this.getProvider()) as Provider
-
-        Schema_promise ??= (() => import('../core/internal/schema/schema.js'))()
-        RpcSchema_promise ??= (() => import('../core/RpcSchema.js'))()
-
-        const [Schema, RpcSchema] = await Promise.all([
-          Schema_promise,
-          RpcSchema_promise,
-        ])
 
         try {
           if (!accounts?.length && !isReconnecting) {
