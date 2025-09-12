@@ -1034,8 +1034,6 @@ export function from<
             : state.accounts[0]
           if (!account) throw new ox_Provider.UnauthorizedError()
 
-          console.log(config.merchantUrl, capabilities?.merchantUrl)
-
           const { id } = await getMode().actions.sendCalls({
             account,
             calls,
