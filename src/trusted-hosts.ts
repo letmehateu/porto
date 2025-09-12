@@ -21,4 +21,5 @@ export const hostnames = [
   'happypath.enso.build',
   'app.ens.domains',
   'www.bungee.exchange',
+  'sponsor-porto.vercel.app',
 ]
