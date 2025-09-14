@@ -13,29 +13,29 @@ const porto = TestConfig.getPorto()
 const client = TestConfig.getRelayClient(porto)
 const contracts = await TestConfig.getContracts(porto)
 
-let server: Http.Server | undefined
-async function setup(options: ExactPartial<Route.merchant.Options> = {}) {
-  const merchantKey = Key.createSecp256k1()
-  const merchantAccount = await TestActions.createAccount(client, {
-    deploy: true,
-    keys: [merchantKey],
-  })
-
-  const route = Route.merchant({
-    ...porto.config,
-    ...options,
-    address: merchantAccount.address,
-    key: merchantKey.privateKey!(),
-  })
-
-  if (server) await server.closeAsync()
-  server = await Http.createServer(route.listener)
-
-  return { merchantAccount, route, server }
-}
-
 describe('merchant', () => {
-  test('behavior: simple', async () => {
+  let server: Http.Server | undefined
+  async function setup(options: ExactPartial<Route.merchant.Options> = {}) {
+    const merchantKey = Key.createSecp256k1()
+    const merchantAccount = await TestActions.createAccount(client, {
+      deploy: true,
+      keys: [merchantKey],
+    })
+
+    const route = Route.merchant({
+      ...porto.config,
+      ...options,
+      address: merchantAccount.address,
+      key: merchantKey.privateKey!(),
+    })
+
+    if (server) await server.closeAsync()
+    server = await Http.createServer(route.listener)
+
+    return { merchantAccount, route, server }
+  }
+
+  test('behavior: simple sponsor', async () => {
     const { server, merchantAccount } = await setup()
 
     const userKey = Key.createHeadlessWebAuthnP256()
@@ -199,7 +199,7 @@ describe('merchant', () => {
   })
 
   // TODO: unskip when merchant account works with interop
-  test.skip('behavior: required funds', async () => {
+  test.skip('behavior: sponsor w/ required funds', async () => {
     const { server, merchantAccount } = await setup()
 
     const chain_dest = TestConfig.chains[1]

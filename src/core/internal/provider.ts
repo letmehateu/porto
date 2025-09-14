@@ -48,7 +48,7 @@ export function from<
     const { chainIds } = parameters
     const request =
       parameters.request ??
-      RpcRequest.validate({
+      RpcRequest.validate(RpcRequest.Request, {
         method: 'wallet_getCapabilities',
         params: [undefined, chainIds],
       })
@@ -84,9 +84,9 @@ export function from<
 
       let request: RpcRequest.Request
       try {
-        request = RpcRequest.validate(request_)
+        request = RpcRequest.validate(RpcRequest.Request, request_)
       } catch (e) {
-        const error = e as RpcRequest.validate.Error
+        const error = e as Error
         if (!(error instanceof RpcResponse.MethodNotSupportedError)) throw error
 
         // catch unsupported methods

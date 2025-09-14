@@ -1,20 +1,12 @@
-import type * as Errors from 'ox/Errors'
 import * as RpcResponse from 'ox/RpcResponse'
 import * as z from 'zod/mini'
+import type { UnionToTuple } from '../types.js'
 import * as RpcRequest from './rpc.js'
 import * as u from './utils.js'
 
 export * from './rpc.js'
 
-export type Request = typeof Schema extends z.ZodMiniUnion<infer U>
-  ? {
-      [K in keyof U]: z.input<U[K]> & {
-        _decoded: z.output<U[K]>
-      }
-    }[number]
-  : never
-
-export const Schema = z.discriminatedUnion('method', [
+export const Request = z.discriminatedUnion('method', [
   RpcRequest.account_verifyEmail.Request,
   RpcRequest.wallet_addFunds.Request,
   RpcRequest.eth_accounts.Request,
@@ -45,21 +37,12 @@ export const Schema = z.discriminatedUnion('method', [
   RpcRequest.wallet_switchEthereumChain.Request,
   RpcRequest.wallet_verifySignature.Request,
 ])
+export type Request = WithDecoded<typeof Request>
 
-export function validate(value: unknown) {
-  return validate_internal<Request>(Schema, value)
-}
-
-export namespace validate {
-  export type ReturnType = validate_internal.ReturnType<Request>
-  export type Error = validate_internal.Error
-}
-
-/** @internal */
-export function validate_internal<Request>(
-  schema: z.ZodMiniType,
+export function validate<schema extends z.ZodMiniType>(
+  schema: schema,
   value: unknown,
-): validate_internal.ReturnType<Request> {
+): WithDecoded<schema> {
   const result = z.safeParse(schema, value)
 
   if (result.error) {
@@ -79,8 +62,29 @@ export function validate_internal<Request>(
 }
 
 /** @internal */
-export declare namespace validate_internal {
-  export type ReturnType<Request> = Request
+export type WithDecoded<
+  schema extends z.ZodMiniType,
+  input = UnionToTuple<z.input<schema>>,
+> = input extends [infer head extends { method: string }, ...infer tail]
+  ?
+      | (head & {
+          _decoded: Extract<
+            schema['_zod']['output'],
+            { method: head['method'] }
+          >
+        })
+      | WithDecoded<schema, tail>
+  : never
 
-  export type Error = RpcResponse.InvalidParamsError | Errors.GlobalErrorType
-}
+/** @internal */
+export const schemaWithJsonRpc = <schema extends z.ZodMiniType>(
+  schema: schema,
+) =>
+  z.intersection(
+    schema,
+    z.object({
+      _returnType: z.unknown(),
+      id: z.number(),
+      jsonrpc: z.literal('2.0'),
+    }),
+  )
