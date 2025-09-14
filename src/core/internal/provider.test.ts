@@ -17,6 +17,7 @@ import {
   setCode,
   signTypedData,
   verifyHash,
+  setBalance as viem_setBalance,
   waitForCallsStatus,
   waitForTransactionReceipt,
 } from 'viem/actions'
@@ -1873,6 +1874,10 @@ describe.each([['relay', Mode.relay]] as const)('%s', (type, mode) => {
         })
         const address = account!.address
 
+        await viem_setBalance(client, {
+          address,
+          value: Value.fromEther('10000'),
+        })
         await setBalance(client, {
           address,
           value: Value.fromEther('10000'),
