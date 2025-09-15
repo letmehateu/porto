@@ -201,7 +201,10 @@ export async function prepareCalls<
       // TODO: remove this once relay implements `wallet_verifyCalls` for
       // permissionless merchants.
       const hostname = new URL(merchantUrl).hostname
-      if (!hostnames.includes(hostname))
+      if (
+        !hostnames.includes(hostname) &&
+        !(chain as { testnet?: boolean | undefined })?.testnet
+      )
         throw new Error(
           'Merchant hostname "' +
             hostname +
