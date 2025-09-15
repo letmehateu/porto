@@ -268,6 +268,13 @@ export namespace wallet_getAssets {
   })
   export type Request = z.infer<typeof Request>
 
+  export const Price = z.object({
+    currency: z.string(),
+    price: z.number(),
+  })
+
+  export type Price = z.infer<typeof Price>
+
   /** Response for `wallet_getAssets`. */
   export const Response = z.record(
     z.string(),
@@ -281,6 +288,7 @@ export namespace wallet_getAssets {
               z.object({
                 decimals: z.number(),
                 name: z.string(),
+                price: z.nullable(Price),
                 symbol: z.string(),
               }),
             ),
@@ -293,6 +301,7 @@ export namespace wallet_getAssets {
               z.object({
                 decimals: z.number(),
                 name: z.optional(z.string()),
+                price: z.nullable(Price),
                 symbol: z.optional(z.string()),
               }),
             ),
