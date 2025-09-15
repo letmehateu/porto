@@ -2165,6 +2165,7 @@ describe.each([['relay', Mode.relay]] as const)('%s', (type, mode) => {
                   to: contracts.exp1.address,
                 },
               ],
+              chainId: Anvil.enabled ? undefined : '0x2105',
               from: address,
               version: '1',
             },
