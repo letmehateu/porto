@@ -26,6 +26,7 @@ import {
   useWatchBlockNumber,
   WagmiProvider,
 } from 'wagmi'
+import * as Dialog from '~/lib/Dialog'
 import { porto } from '~/lib/Porto'
 import * as Tokens from '~/lib/Tokens'
 import { Layout } from '~/routes/-components/Layout'
@@ -50,6 +51,7 @@ type View =
   | 'connected-wallet-transfer'
   | 'default'
   | 'error'
+  | 'onramp'
 
 export function AddFunds(props: AddFunds.Props) {
   const { chainId, onApprove, onReject, tokenAddress, value } = props
@@ -118,6 +120,15 @@ export function AddFunds(props: AddFunds.Props) {
     return false
   }, [chain, token, tokenAddress, view])
 
+  const referrer = Dialog.useStore((state) => state.referrer)
+  const showApplePay = React.useMemo(() => {
+    return (
+      referrer?.url?.hostname.endsWith('localhost') ||
+      referrer?.url?.hostname === 'playground.porto.sh' ||
+      referrer?.url?.hostname.endsWith('preview.porto.sh')
+    )
+  }, [referrer?.url])
+
   if (view === 'error')
     return (
       <Layout>
@@ -181,6 +192,10 @@ export function AddFunds(props: AddFunds.Props) {
 
       <Layout.Content>
         <div className="flex flex-col gap-3">
+          {showApplePay && address && (
+            <Onramp address={address} minAmount={value} setView={setView} />
+          )}
+
           {showFaucet && (
             <>
               <Faucet
@@ -199,20 +214,22 @@ export function AddFunds(props: AddFunds.Props) {
             </>
           )}
 
-          <WagmiProvider config={config} reconnectOnMount={false}>
-            <QueryClientProvider client={queryClient}>
-              <DepositCrypto
-                address={address}
-                chainId={chain?.id}
-                minValue={value}
-                nativeTokenName={chain?.nativeCurrency?.symbol}
-                setView={setView}
-                token={token}
-                tokenAddress={tokenAddress}
-                view={view}
-              />
-            </QueryClientProvider>
-          </WagmiProvider>
+          {view !== 'onramp' && (
+            <WagmiProvider config={config} reconnectOnMount={false}>
+              <QueryClientProvider client={queryClient}>
+                <DepositCrypto
+                  address={address}
+                  chainId={chain?.id}
+                  minValue={value}
+                  nativeTokenName={chain?.nativeCurrency?.symbol}
+                  setView={setView}
+                  token={token}
+                  tokenAddress={tokenAddress}
+                  view={view}
+                />
+              </QueryClientProvider>
+            </WagmiProvider>
+          )}
         </div>
       </Layout.Content>
     </Layout>
@@ -228,6 +245,157 @@ export declare namespace AddFunds {
     tokenAddress?: Address.Address | undefined
     value?: string | undefined
   }
+}
+
+function Onramp(props: {
+  address: Address.Address
+  minAmount?: string | undefined
+  setView: (view: View) => void
+}) {
+  const { address } = props
+
+  const [view, setView] = React.useState<'start' | 'amount' | 'pay'>('start')
+
+  const minAmount = React.useMemo(() => {
+    const value = props.minAmount
+      ? Math.ceil(Number(props.minAmount))
+      : undefined
+    return value && value >= 2 ? value : 2
+  }, [props.minAmount])
+  const maxAmount = 500
+  const presetAmounts = React.useMemo(() => {
+    if (minAmount > 0) {
+      const getMultipliers = (amount: number) => {
+        if (amount <= 5) return [1, 5, 10, 25]
+        if (amount <= 10) return [1, 2, 5, 10]
+        return [1, 2, 3, 4]
+      }
+      return getMultipliers(minAmount).map(
+        (multiplier) => minAmount * multiplier,
+      )
+    }
+    return [30, 50, 100, 250] as const
+  }, [minAmount])
+
+  const [mode, setMode] = React.useState<'preset' | 'custom'>(
+    minAmount ? 'custom' : 'preset',
+  )
+  const [amount, setAmount] = React.useState<string>(
+    (minAmount ? minAmount : presetAmounts[0]).toString(),
+  )
+
+  const createOrder = useMutation({
+    async mutationFn(variables: { address: string; amount: string }) {
+      const response = await fetch(
+        `${import.meta.env.VITE_WORKERS_URL}/onramp/orders`,
+        {
+          body: JSON.stringify({
+            address: variables.address,
+            amount: Number.parseFloat(variables.amount),
+          }),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          method: 'POST',
+        },
+      )
+      return (await response.json()) as {
+        paymentLinkType: 'apple'
+        url: string
+      }
+    },
+  })
+
+  if (view === 'start') {
+    return (
+      <Button
+        className="w-full flex-1"
+        onClick={() => {
+          props.setView('onramp')
+          setView('amount')
+        }}
+        type="submit"
+        variant="primary"
+        width="grow"
+      >
+        Apple Pay
+      </Button>
+    )
+  }
+
+  if (view === 'amount') {
+    return (
+      <form
+        className="grid h-min grid-flow-row auto-rows-min grid-cols-1 space-y-3"
+        onSubmit={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          createOrder.mutate(
+            { address, amount },
+            {
+              onSuccess() {
+                setView('pay')
+              },
+            },
+          )
+        }}
+      >
+        <div className="col-span-1 row-span-1">
+          <PresetsInput
+            adornments={{
+              end: {
+                label: `Max. $${maxAmount}`,
+                type: 'fill',
+                value: String(maxAmount),
+              },
+              start: '$',
+            }}
+            inputMode="decimal"
+            max={maxAmount}
+            min={minAmount}
+            mode={mode}
+            onChange={setAmount}
+            onModeChange={setMode}
+            placeholder="Enter amount"
+            presets={presetAmounts.map((value) => ({
+              label: `$${value}`,
+              value: value.toString(),
+            }))}
+            type="number"
+            value={amount}
+          />
+        </div>
+        <div className="col-span-1 row-span-1 space-y-3.5">
+          <Button
+            className="w-full flex-1"
+            disabled={!address || !amount || Number(amount) === 0}
+            loading={createOrder.isPending}
+            type="submit"
+            variant="primary"
+            width="grow"
+          >
+            Continue
+          </Button>
+        </div>
+      </form>
+    )
+  }
+
+  return (
+    <div>
+      {createOrder.isSuccess && createOrder.data?.url && (
+        <div className="overflow-hidden rounded-lg border">
+          <iframe
+            className="h-40 w-full border-0"
+            referrerPolicy="no-referrer-when-downgrade"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
+            src={createOrder.data.url}
+            title="Payment Link"
+          />
+        </div>
+      )}
+    </div>
+  )
 }
 
 function Faucet(props: {
