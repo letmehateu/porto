@@ -150,6 +150,22 @@ try {
     cwd: submodulePath,
   })
 
+  {
+    const { status } = child_process.spawnSync('pnpm', ['build:contracts'], {
+      stdio: 'inherit',
+    })
+    if (status !== 0) throw new Error('Failed to build contracts')
+  }
+
+  {
+    const { status } = child_process.spawnSync('pnpm', ['build:anvil-state'], {
+      stdio: 'inherit',
+    })
+    if (status !== 0) throw new Error('Failed to build anvil state')
+  }
+
+  child_process.spawnSync('pnpm', ['check'])
+
   console.log(`Successfully updated \`contracts/account\` submodule to ${sha}`)
 } catch (error) {
   console.error('Failed to update contracts/account submodule:', error)
