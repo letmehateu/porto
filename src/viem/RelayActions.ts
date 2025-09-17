@@ -144,7 +144,7 @@ export async function prepareCalls<
   const {
     contracts,
     fees: { tokens },
-  } = await RelayActions.getCapabilities(client)
+  } = await RelayActions.getCapabilities(client, { chainId: chain?.id })
   const orchestrator = hasSessionKey
     ? contracts.orchestrator.address
     : undefined
