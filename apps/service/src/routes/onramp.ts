@@ -16,6 +16,7 @@ onrampApp.post(
     z.object({
       address: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
       amount: z.number().gte(1).lt(10_000),
+      domain: z.string(),
       provider: z
         .union([z.literal('coinbase')])
         .optional()
@@ -46,6 +47,7 @@ onrampApp.post(
             agreementAcceptedAt,
             destinationAddress: json.address,
             destinationNetwork: 'base',
+            domain: json.domain,
             email,
             partnerUserRef: `sandbox-${json.address}`,
             paymentCurrency: 'USD',

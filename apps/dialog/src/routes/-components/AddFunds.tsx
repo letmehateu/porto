@@ -285,6 +285,9 @@ function Onramp(props: {
     (minAmount ? minAmount : presetAmounts[0]).toString(),
   )
 
+  const domain = Dialog.useStore((state) =>
+    state.mode === 'popup' ? location.hostname : state.referrer?.url?.hostname,
+  )
   const createOrder = useMutation({
     async mutationFn(variables: { address: string; amount: string }) {
       const response = await fetch(
@@ -293,6 +296,7 @@ function Onramp(props: {
           body: JSON.stringify({
             address: variables.address,
             amount: Number.parseFloat(variables.amount),
+            domain,
           }),
           headers: {
             'Content-Type': 'application/json',
@@ -311,6 +315,7 @@ function Onramp(props: {
     React.useState<`onramp_api.${'load_pending' | 'load_success' | 'load_error' | 'commit_success' | 'commit_error' | 'cancel' | 'polling_start' | 'polling_success' | 'polling_error' | 'apple_pay_button_pressed'}`>(
       'onramp_api.load_pending',
     )
+  // TODO: iframe loading timeout
   React.useEffect(() => {
     function handlePostMessage(event: MessageEvent) {
       if (event.origin !== 'https://pay.coinbase.com') return
@@ -405,13 +410,13 @@ function Onramp(props: {
       {createOrder.isSuccess && createOrder.data?.url && (
         <iframe
           className={cx(
-            'w-full border-0',
+            'w-full overflow-hidden border-0',
             onrampState === 'onramp_api.load_pending'
-              ? 'mb-1.5 h-11! overflow-hidden rounded-[56px] bg-black dark:bg-white'
+              ? 'mb-1.5 h-11! rounded-[56px] bg-black dark:bg-white'
               : 'bg-transparent',
             onrampState === 'onramp_api.apple_pay_button_pressed'
-              ? 'fixed inset-0 z-100 h-full'
-              : 'h-12.5 w-full overflow-hidden border-0 bg-transparent',
+              ? 'overflow-visible! fixed inset-0 z-100 h-full'
+              : 'h-12.5 w-full border-0 bg-transparent',
           )}
           onError={() => setOnrampState('onramp_api.load_error')}
           referrerPolicy="no-referrer-when-downgrade"
