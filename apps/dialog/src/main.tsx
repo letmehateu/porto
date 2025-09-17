@@ -54,7 +54,7 @@ const offInitialized = Events.onInitialized(porto, (payload, event) => {
 
   const referrerUri = document.referrer || event.origin
 
-  Dialog.store.setState((state) => ({
+  Dialog.store.setState({
     mode,
     referrer: {
       ...referrer,
@@ -68,13 +68,7 @@ const offInitialized = Events.onInitialized(porto, (payload, event) => {
     ...(theme
       ? { customTheme: Theme.parseJsonTheme(JSON.stringify(theme)) }
       : {}),
-
-    // Only the iframe mode starts hidden until request:open is sent
-    visible:
-      mode !== 'iframe' ||
-      // only set visible:false on the first iframe init call
-      (state.mode !== 'iframe' ? false : state.visible),
-  }))
+  })
 })
 
 const offDialogRequest = Events.onDialogRequest(
@@ -149,13 +143,6 @@ porto.messenger.on('__internal', (payload) => {
     Dialog.store.setState({
       customTheme: Theme.parseJsonTheme(JSON.stringify(payload.theme)),
     })
-
-  if (payload.type === 'dialog-lifecycle') {
-    if (payload.action === 'request:open')
-      Dialog.store.setState({ visible: true })
-    if (payload.action === 'request:close')
-      Dialog.store.setState({ visible: false })
-  }
 })
 
 porto.ready()
