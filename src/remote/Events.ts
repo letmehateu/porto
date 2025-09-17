@@ -186,7 +186,6 @@ export function onRequests(
 ) {
   const { messenger, _internal } = porto
   return messenger.on('rpc-requests', (payload, event) => {
-    console.log(payload, window.performance.now())
     const requests = payload as Remote.RemoteState['requests']
     _internal.remoteStore.setState({ requests })
     cb(requests, event)
