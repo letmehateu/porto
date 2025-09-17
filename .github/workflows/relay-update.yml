@@ -33,16 +33,7 @@ jobs:
       - name: Get latest relay version
         id: latest-version
         run: |
-          if [ "${{ github.event.client_payload.version }}" != "" ]; then
-            # Use version from repository dispatch
-            LATEST_VERSION="${{ github.event.client_payload.version }}"
-            echo "Using version from repository dispatch: $LATEST_VERSION"
-          else
-            # Fetch latest version from GitHub API
-            LATEST_VERSION=$(curl -s https://api.github.com/repos/ithacaxyz/relay/releases/latest | jq -r '.tag_name' | sed 's/^v//')
-            echo "Fetched latest version from GitHub: $LATEST_VERSION"
-          fi
-          
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/ithacaxyz/relay/releases/latest | jq -r '.tag_name' | sed 's/^v//')
           echo "latest=$LATEST_VERSION" >> $GITHUB_OUTPUT
           echo "Latest relay version: $LATEST_VERSION"
 
