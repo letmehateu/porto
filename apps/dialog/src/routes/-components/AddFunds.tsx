@@ -9,6 +9,7 @@ import {
   useQuery,
 } from '@tanstack/react-query'
 import { Cuer } from 'cuer'
+import { cx } from 'cva'
 import { type Address, Hex, Value } from 'ox'
 import { Hooks as RemoteHooks } from 'porto/remote'
 import { RelayActions } from 'porto/viem'
@@ -306,11 +307,17 @@ function Onramp(props: {
     },
   })
 
+  const [onrampState, setOnrampState] =
+    React.useState<`onramp_api.${'load_pending' | 'load_success' | 'load_error' | 'commit_success' | 'commit_error' | 'cancel' | 'polling_start' | 'polling_success' | 'polling_error' | 'apple_pay_button_pressed'}`>(
+      'onramp_api.load_pending',
+    )
   React.useEffect(() => {
     function handlePostMessage(event: MessageEvent) {
       if (event.origin !== 'https://pay.coinbase.com') return
       const data = JSON.parse(event.data)
       console.log(data)
+      if ('eventName' in data && data.eventName.startsWith('onramp_api.'))
+        setOnrampState(data.eventName)
     }
     window.addEventListener('message', handlePostMessage)
     return () => {
@@ -330,7 +337,7 @@ function Onramp(props: {
         variant="primary"
         width="grow"
       >
-        Apple Pay
+        Onramp
       </Button>
     )
   }
@@ -397,13 +404,23 @@ function Onramp(props: {
     <div>
       {createOrder.isSuccess && createOrder.data?.url && (
         <iframe
-          className="h-12.5 w-full border-0 bg-transparent"
+          className={cx(
+            'w-full border-0',
+            onrampState === 'onramp_api.load_pending'
+              ? 'mb-1.5 h-11! overflow-hidden rounded-[56px] bg-black dark:bg-white'
+              : 'bg-transparent',
+            onrampState === 'onramp_api.apple_pay_button_pressed'
+              ? 'fixed inset-0 z-100'
+              : 'h-12.5 w-full border-0 bg-transparent',
+          )}
+          onError={() => setOnrampState('onramp_api.load_error')}
           referrerPolicy="no-referrer-when-downgrade"
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
           src={createOrder.data.url}
           title="Payment Link"
         />
       )}
+      <div>{onrampState}</div>
     </div>
   )
 }

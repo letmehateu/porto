@@ -24,7 +24,6 @@ onrampApp.post(
   ),
   async (c) => {
     const json = c.req.valid('json')
-    console.log(json)
 
     switch (json.provider) {
       case 'coinbase': {
