@@ -309,7 +309,7 @@ export async function prepareUpgradeAccount<chain extends Chain | undefined>(
   const {
     contracts,
     fees: { tokens },
-  } = await RelayActions.getCapabilities(client)
+  } = await RelayActions.getCapabilities(client, { chainId: chain.id })
 
   const delegation = parameters.delegation ?? contracts.accountProxy.address
   const hasSessionKey = keys.some((x) => x.role === 'session')
