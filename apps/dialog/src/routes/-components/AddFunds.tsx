@@ -410,8 +410,8 @@ function Onramp(props: {
               ? 'mb-1.5 h-11! overflow-hidden rounded-[56px] bg-black dark:bg-white'
               : 'bg-transparent',
             onrampState === 'onramp_api.apple_pay_button_pressed'
-              ? 'fixed inset-0 z-100'
-              : 'h-12.5 w-full border-0 bg-transparent',
+              ? 'fixed inset-0 z-100 h-full'
+              : 'h-12.5 w-full overflow-hidden border-0 bg-transparent',
           )}
           onError={() => setOnrampState('onramp_api.load_error')}
           referrerPolicy="no-referrer-when-downgrade"
