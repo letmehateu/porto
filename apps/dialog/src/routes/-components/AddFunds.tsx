@@ -201,7 +201,7 @@ export function AddFunds(props: AddFunds.Props) {
             <Onramp
               address={address}
               minAmount={value}
-              onApprove={onApprove as () => void}
+              onApprove={onApprove}
               setView={setView}
             />
           )}
@@ -316,7 +316,7 @@ type CbPostMessageSchema = z.infer<typeof cbPostMessageSchema>
 function Onramp(props: {
   address: Address.Address
   minAmount?: string | undefined
-  onApprove: () => void
+  onApprove: (result: { id: Hex.Hex }) => void
   setView: (view: View) => void
 }) {
   const { address } = props
@@ -350,6 +350,7 @@ function Onramp(props: {
   const [amount, setAmount] = React.useState<string>(
     (minAmount ? minAmount : presetAmounts[0]).toString(),
   )
+  const [sandbox, setSandbox] = React.useState(true)
 
   const domain = Dialog.useStore((state) =>
     state.mode === 'popup' ? location.hostname : state.referrer?.url?.hostname,
@@ -363,6 +364,7 @@ function Onramp(props: {
             address: variables.address,
             amount: Number.parseFloat(variables.amount),
             domain,
+            sandbox,
           }),
           headers: {
             'Content-Type': 'application/json',
@@ -370,10 +372,14 @@ function Onramp(props: {
           method: 'POST',
         },
       )
-      return (await response.json()) as {
-        paymentLinkType: 'apple'
-        url: string
-      }
+      return z.parse(
+        z.object({
+          orderId: z.string(),
+          type: z.literal('apple'),
+          url: z.string(),
+        }),
+        await response.json(),
+      )
     },
   })
 
@@ -390,7 +396,9 @@ function Onramp(props: {
         if ('eventName' in data && data.eventName.startsWith('onramp_api.')) {
           setOnrampState(data)
           if (data.eventName === 'onramp_api.commit_success') {
-            props.onApprove()
+            // TODO: get transaction hash from order
+            // https://docs.cdp.coinbase.com/api-reference/v2/rest-api/onramp/get-an-onramp-order-by-id
+            props.onApprove({ id: zeroAddress })
           }
         }
       } catch (error) {
@@ -426,6 +434,7 @@ function Onramp(props: {
     )
   }
 
+  // TODO: Show amount selector immediately if email/phone exist for address + phone is verified
   if (view === 'amount') {
     return (
       <form
@@ -469,6 +478,16 @@ function Onramp(props: {
           />
         </div>
         <div className="col-span-1 row-span-1 space-y-1.5">
+          <label>
+            <input
+              checked={sandbox}
+              onChange={() => setSandbox((x) => !x)}
+              type="checkbox"
+            />
+            Sandbox?
+          </label>
+        </div>
+        <div className="col-span-1 row-span-1 space-y-1.5">
           <Button
             className="w-full flex-1"
             disabled={!address || !amount || Number(amount) === 0}
@@ -500,13 +519,12 @@ function Onramp(props: {
     <div>
       {createOrder.isSuccess && createOrder.data?.url && (
         <iframe
+          // TODO: tweak iframe styles
           className={cx(
-            'w-full overflow-hidden border-0 bg-transparent',
-            onrampState.eventName === 'onramp_api.load_pending' &&
-              'mb-1.5 h-11!',
+            'h-12.5 w-full overflow-hidden border-0 bg-transparent',
             onrampState.eventName === 'onramp_api.apple_pay_button_pressed'
-              ? 'overflow-visible! fixed inset-0 z-100 h-full'
-              : 'h-12.5 w-full border-0bg-transparent',
+              ? 'overflow-visible! fixed inset-0 z-100 h-full!'
+              : 'w-full border-0bg-transparent',
           )}
           onError={() =>
             setOnrampState({

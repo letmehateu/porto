@@ -21,6 +21,7 @@ onrampApp.post(
         .union([z.literal('coinbase')])
         .optional()
         .default('coinbase'),
+      sandbox: z.boolean(),
     }),
   ),
   async (c) => {
@@ -36,8 +37,8 @@ onrampApp.post(
           request: { method, path },
         })
 
-        // TODO
-        const email = 'test@example.com'
+        // TODO: get data from relay
+        const email = 'tom@ithaca.xyz'
         const phoneNumber = '+16173125700'
         const agreementAcceptedAt = new Date().toISOString()
         const phoneNumberVerifiedAt = new Date().toISOString()
@@ -49,7 +50,7 @@ onrampApp.post(
             destinationNetwork: 'base',
             domain: json.domain,
             email,
-            partnerUserRef: `sandbox-${json.address}`,
+            partnerUserRef: `${json.sandbox ? 'sandbox-' : ''}${json.address}`,
             paymentCurrency: 'USD',
             paymentMethod: 'GUEST_CHECKOUT_APPLE_PAY',
             phoneNumber,
@@ -71,6 +72,9 @@ onrampApp.post(
         const data = await response.json()
         const parsed = await z
           .object({
+            order: z.object({
+              orderId: z.string(),
+            }),
             paymentLink: z.object({
               paymentLinkType: z.literal('PAYMENT_LINK_TYPE_APPLE_PAY_BUTTON'),
               url: z.url(),
@@ -81,6 +85,7 @@ onrampApp.post(
           PAYMENT_LINK_TYPE_APPLE_PAY_BUTTON: 'apple',
         } as const
         return c.json({
+          orderId: parsed.order.orderId,
           type: typeLookup[parsed.paymentLink.paymentLinkType],
           url: parsed.paymentLink.url,
         })
