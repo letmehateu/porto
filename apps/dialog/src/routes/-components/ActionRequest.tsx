@@ -166,8 +166,6 @@ export function ActionRequest(props: ActionRequest.Props) {
             />
           )
 
-        if (!identified && calls.length === 0) return <Layout loading />
-
         return (
           <Layout>
             <Layout.Header>

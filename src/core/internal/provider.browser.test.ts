@@ -275,10 +275,8 @@ describe('wallet_getPermissions', () => {
         params: [{ calls: [] }],
       }),
       async (iframe) => {
-        if (iframe.getByTestId('add-funds').query()) {
-          await iframe.getByTestId('add-funds').click()
-          await iframe.getByTestId('buy').click()
-        }
+        await iframe.getByTestId('add-funds').click()
+        await iframe.getByTestId('buy').click()
         await iframe.getByTestId('confirm').click()
       },
     )
