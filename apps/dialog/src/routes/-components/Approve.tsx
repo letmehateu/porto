@@ -1,5 +1,6 @@
 import {
   Button,
+  ChainsPath,
   CopyButton,
   Details,
   Spinner,
@@ -13,7 +14,6 @@ import { type Address, type Chain, erc20Abi, maxUint256 } from 'viem'
 import { useReadContracts } from 'wagmi'
 import { PriceFormatter, StringFormatter } from '~/utils'
 import LucideLockKeyholeOpen from '~icons/lucide/lock-keyhole-open'
-import { ActionRequest } from './ActionRequest'
 import { Layout } from './Layout'
 
 export function Approve(props: Approve.Props) {
@@ -26,8 +26,11 @@ export function Approve(props: Approve.Props) {
     fetchingQuote,
     onApprove,
     onReject,
+    onAddFunds,
     spender,
+    refreshingQuote,
     tokenAddress,
+    hasDeficit,
   } = props
 
   let { unlimited } = props
@@ -117,27 +120,38 @@ export function Approve(props: Approve.Props) {
               unlimited={unlimited}
             />
           </div>
-          <Details loading={fetchingQuote}>
-            <div className="flex h-[18px] items-center justify-between text-[14px]">
-              <span className="text-th_base-secondary">Requested by</span>
-              <div
-                className="flex items-center gap-[8px] font-medium"
-                title={spender}
-              >
-                {StringFormatter.truncate(spender)}
-                <CopyButton value={spender} />
-              </div>
-            </div>
-            {feeFormatted && (
-              <div className="flex h-[18px] items-center justify-between text-[14px]">
-                <div className="text-th_base-secondary">Fees (est.)</div>
-                <div className="font-medium" title={feeFormatted.full}>
-                  {feeFormatted.short}
+          <Details loading={fetchingQuote && !hasDeficit}>
+            <Details.Item
+              label="Requested by"
+              value={
+                <div className="flex items-center gap-[8px]" title={spender}>
+                  {StringFormatter.truncate(spender)}
+                  <CopyButton value={spender} />
                 </div>
-              </div>
+              }
+            />
+            {feeFormatted && (
+              <Details.Item
+                label="Fees (est.)"
+                value={
+                  <div title={feeFormatted.full}>{feeFormatted.short}</div>
+                }
+              />
             )}
-            <ActionRequest.ChainsPath chainsPath={chainsPath} />
+            {chainsPath.length > 0 && (
+              <Details.Item
+                label={`Network${chainsPath.length > 1 ? 's' : ''}`}
+                value={
+                  <ChainsPath chainIds={chainsPath.map((chain) => chain.id)} />
+                }
+              />
+            )}
           </Details>
+          {hasDeficit && (
+            <div className="rounded-th_medium border border-th_warning bg-th_warning px-3 py-[10px] text-center text-sm text-th_warning">
+              You do not have enough funds.
+            </div>
+          )}
         </div>
       </Layout.Content>
 
@@ -151,21 +165,35 @@ export function Approve(props: Approve.Props) {
           >
             Cancel
           </Button>
-          <Button
-            disabled={fetchingQuote || tokenInfo.isLoading || tokenInfo.isError}
-            loading={
-              fetchingQuote
-                ? 'Refreshing quote…'
-                : approving
-                  ? 'Approving…'
-                  : undefined
-            }
-            onClick={onApprove}
-            variant="positive"
-            width="grow"
-          >
-            Approve
-          </Button>
+          {hasDeficit ? (
+            <Button
+              data-testid="add-funds"
+              disabled={!onAddFunds}
+              onClick={onAddFunds}
+              variant="primary"
+              width="grow"
+            >
+              Add funds
+            </Button>
+          ) : (
+            <Button
+              disabled={
+                tokenInfo.isLoading || tokenInfo.isError || fetchingQuote
+              }
+              loading={
+                refreshingQuote
+                  ? 'Refreshing quote…'
+                  : approving
+                    ? 'Approving…'
+                    : undefined
+              }
+              onClick={onApprove}
+              variant="positive"
+              width="grow"
+            >
+              Approve
+            </Button>
+          )}
         </Layout.Footer.Actions>
       </Layout.Footer>
     </Layout>
@@ -182,9 +210,12 @@ export namespace Approve {
     fetchingQuote?: boolean | undefined
     onApprove: () => void
     onReject: () => void
+    onAddFunds?: () => void
+    refreshingQuote?: boolean | undefined
     spender: `0x${string}`
     tokenAddress: `0x${string}`
     unlimited?: boolean | undefined
+    hasDeficit?: boolean | undefined
   }
 
   export function AllowanceRow({
@@ -218,7 +249,7 @@ export namespace Approve {
             </div>
           </div>
         ) : (
-          <div className="flex h-full w-full items-center gap-[8px]">
+          <div className="absolute flex h-full w-full items-center gap-[8px]">
             <TokenIcon className="shrink-0" symbol={symbol} />
             <div className="flex flex-1 flex-col gap-[4px]">
               <div

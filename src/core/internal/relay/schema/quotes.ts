@@ -8,8 +8,26 @@ import { z } from 'zod/mini'
 import * as u from '../../schema/utils.js'
 import * as Intent from './intent.js'
 
+export const AssetDeficit = z.object({
+  /** Asset address. null represents the native token. */
+  address: z.union([u.address(), z.null()]),
+  /** Token decimals. */
+  decimals: z.optional(z.number()),
+  /** Deficit for the asset. */
+  deficit: u.bigint(),
+  /** Token name. */
+  name: z.optional(z.string()),
+  /** Required amount for the asset. */
+  required: u.bigint(),
+  /** Token symbol. */
+  symbol: z.optional(z.string()),
+})
+export type AssetDeficit = z.infer<typeof AssetDeficit>
+
 /** A quote from the RPC for a given `Intent`. */
 export const Quote = z.object({
+  /** Assets missing for the intent to execute. */
+  assetDeficits: z.optional(z.array(AssetDeficit)),
   /**
    * An optional unsigned authorization item.
    * The account in `eoa` will be delegated to this address.

@@ -2,7 +2,7 @@ import * as Ariakit from '@ariakit/react'
 import { UserAgent } from '@porto/apps'
 import { exp1Address } from '@porto/apps/contracts'
 import { useCopyToClipboard, usePrevious } from '@porto/apps/hooks'
-import { Button, PresetsInput, Spinner } from '@porto/ui'
+import { Balance, Button, PresetsInput, Separator, Spinner } from '@porto/ui'
 import {
   QueryClient,
   QueryClientProvider,
@@ -21,6 +21,7 @@ import {
   createConfig,
   useAccount,
   useAccountEffect,
+  useBalance,
   useConnect,
   useDisconnect,
   useSendCalls,
@@ -29,17 +30,20 @@ import {
   WagmiProvider,
 } from 'wagmi'
 import * as z from 'zod/mini'
+import { CheckBalance } from '~/components/CheckBalance'
 import * as Dialog from '~/lib/Dialog'
 import { porto } from '~/lib/Porto'
 import * as Tokens from '~/lib/Tokens'
 import { Layout } from '~/routes/-components/Layout'
+import { PriceFormatter, ValueFormatter } from '~/utils'
 import LucideCopy from '~icons/lucide/copy'
 import LucideCopyCheck from '~icons/lucide/copy-check'
 import LucideOctagonAlert from '~icons/lucide/octagon-alert'
 import TriangleAlertIcon from '~icons/lucide/triangle-alert'
+import Star from '~icons/ph/star-four-bold'
 
 const presetAmounts = ['30', '50', '100', '250'] as const
-const MAX_AMOUNT = 500
+const maxAmount = 500
 
 const config = createConfig({
   chains: porto._internal.config.chains,
@@ -57,7 +61,7 @@ type View =
   | 'onramp'
 
 export function AddFunds(props: AddFunds.Props) {
-  const { chainId, onApprove, onReject, tokenAddress, value } = props
+  const { chainId, onApprove, onReject, value, assetDeficits } = props
 
   const [view, setView] = React.useState<View>('default')
 
@@ -65,9 +69,6 @@ export function AddFunds(props: AddFunds.Props) {
   const address = props.address ?? account?.address
   const chain = RemoteHooks.useChain(porto, { chainId })
   const { data: tokens } = Tokens.getTokens.useQuery()
-  const { data: token } = Tokens.getToken.useQuery({
-    addressOrSymbol: tokenAddress,
-  })
 
   const { data: assets, refetch: refetchAssets } = Hooks.useAssets({
     account: account?.address,
@@ -82,9 +83,12 @@ export function AddFunds(props: AddFunds.Props) {
   })
   const balanceMap = React.useMemo(() => {
     const addressBalanceMap = new Map<Address.Address, bigint>()
-    if (!assets || !tokens) return addressBalanceMap
+    if (!assets) return addressBalanceMap
+
     const tokenAddressMap = new Map<Address.Address, boolean>()
-    for (const token of tokens) tokenAddressMap.set(token!.address, true)
+    if (tokens)
+      for (const token of tokens) tokenAddressMap.set(token.address, true)
+
     for (const asset of assets) {
       const address =
         (asset.address === 'native' || asset.type === 'native'
@@ -116,12 +120,10 @@ export function AddFunds(props: AddFunds.Props) {
   const showFaucet = React.useMemo(() => {
     // Don't show faucet if not on "default" view.
     if (view !== 'default') return false
-    // Show faucet if on a testnet and no target token is provided.
-    if (!tokenAddress && chain?.testnet) return true
-    // Show faucet if the token is an EXP token.
-    if (token?.uid.startsWith('exp')) return true
+    // Show faucet if on a testnet.
+    if (chain?.testnet) return true
     return false
-  }, [chain, token, tokenAddress, view])
+  }, [chain, view])
 
   const referrer = Dialog.useStore((state) => state.referrer)
   const showApplePay = React.useMemo(() => {
@@ -185,18 +187,29 @@ export function AddFunds(props: AddFunds.Props) {
           />
         ) : (
           <Layout.Header.Default
-            content={
-              view === 'connected-wallet-transfer'
-                ? 'Select which assets you want to deposit to your Porto wallet.'
-                : 'Deposit via crypto or credit card.'
-            }
+            icon={Star}
             title="Add funds"
+            variant="default"
           />
         )}
       </Layout.Header>
 
       <Layout.Content>
         <div className="flex flex-col gap-3">
+          <BalanceGroup
+            address={address}
+            assetDeficits={assetDeficits}
+            chainId={chainId}
+          />
+          <Separator
+            label={
+              view === 'connected-wallet-transfer'
+                ? 'Select which assets you want to deposit to your Porto wallet'
+                : 'Select deposit method'
+            }
+            size="medium"
+            spacing={0}
+          />
           {showApplePay && address && (
             <Onramp
               address={address}
@@ -207,21 +220,12 @@ export function AddFunds(props: AddFunds.Props) {
           )}
 
           {showFaucet && (
-            <>
-              <Faucet
-                address={address}
-                chainId={chain?.id}
-                decimals={token?.decimals}
-                defaultValue={value}
-                onApprove={onApprove}
-                tokenAddress={tokenAddress}
-              />
-              <div className="my-auto flex w-full flex-row items-center gap-2 *:border-th_separator">
-                <hr className="flex-1 border-th_separator" />
-                <span className="px-3 text-th_base-secondary">or</span>
-                <hr className="flex-1 border-th_separator" />
-              </div>
-            </>
+            <Faucet
+              address={address}
+              chainId={chain?.id}
+              defaultValue={value}
+              onApprove={onApprove}
+            />
           )}
 
           {view !== 'onramp' && (
@@ -229,12 +233,10 @@ export function AddFunds(props: AddFunds.Props) {
               <QueryClientProvider client={queryClient}>
                 <DepositCrypto
                   address={address}
+                  assetDeficits={assetDeficits}
                   chainId={chain?.id}
-                  minValue={value}
                   nativeTokenName={chain?.nativeCurrency?.symbol}
                   setView={setView}
-                  token={token}
-                  tokenAddress={tokenAddress}
                   view={view}
                 />
               </QueryClientProvider>
@@ -252,9 +254,94 @@ export declare namespace AddFunds {
     chainId?: number | undefined
     onApprove: (result: { id: Hex.Hex }) => void
     onReject?: () => void
-    tokenAddress?: Address.Address | undefined
     value?: string | undefined
+    assetDeficits?: readonly {
+      address: Address.Address | null
+      deficit: bigint
+      required: bigint
+      decimals?: number
+      name?: string
+      symbol?: string
+    }[]
   }
+}
+
+function BalanceGroup(props: {
+  address?: Address.Address
+  assetDeficits?: AddFunds.Props['assetDeficits']
+  chainId?: number
+}) {
+  const { address, assetDeficits, chainId } = props
+
+  const deficits = React.useMemo(() => {
+    if (assetDeficits && assetDeficits.length > 0) return assetDeficits
+    return []
+  }, [assetDeficits])
+
+  if (deficits.length === 0) return null
+
+  return (
+    <Balance.Group>
+      {deficits.map((deficit, index) => (
+        <BalanceItem
+          address={address}
+          chainId={chainId}
+          deficit={deficit}
+          key={`${deficit.address}-${index}`}
+        />
+      ))}
+    </Balance.Group>
+  )
+}
+
+function BalanceItem(props: {
+  address?: Address.Address
+  chainId?: number
+  deficit: NonNullable<AddFunds.Props['assetDeficits']>[0]
+}) {
+  const { address, chainId, deficit } = props
+
+  const balance = useBalance({
+    address,
+    chainId: chainId as never,
+    token: deficit.address === null ? undefined : deficit.address,
+  })
+
+  const balanceFormatted = React.useMemo(() => {
+    const currentBalance = balance.data?.value ?? 0n
+    const requiredAmount = deficit.required ?? 0n
+
+    const actualDeficit =
+      requiredAmount > currentBalance ? requiredAmount - currentBalance : 0n
+    const deficitWithBuffer = CheckBalance.addFeeBuffer(actualDeficit)
+
+    const decimals = deficit.decimals ?? balance.data?.decimals ?? 18
+    const symbol = deficit.symbol ?? balance.data?.symbol ?? 'Unknown'
+
+    return {
+      amount: `${ValueFormatter.format(deficitWithBuffer, decimals)} ${symbol}`,
+      amountFiat: PriceFormatter.format(
+        Number(Value.format(deficitWithBuffer, decimals)),
+      ),
+    }
+  }, [balance.data, deficit])
+
+  if (!chainId) return null
+
+  return (
+    <Balance
+      amount={balanceFormatted?.amount ?? '0'}
+      amountFiat={balanceFormatted?.amountFiat ?? '$0.00'}
+      chainId={chainId}
+      fetching={balance.isFetching || balance.isLoading}
+      onRefetch={() => balance.refetch()}
+      tokenName={
+        deficit.name ?? deficit.symbol ?? balance.data?.symbol ?? 'Unknown'
+      }
+      tokenSymbol={deficit.symbol ?? balance.data?.symbol ?? 'Unknown'}
+      warn
+    />
+  )
 }
 
 const cbPostMessageSchema = z.union([
@@ -558,12 +645,9 @@ function Faucet(props: {
   address: Address.Address | undefined
   chainId: number | undefined
   defaultValue: string | undefined
-  decimals: number | undefined
-  tokenAddress: Address.Address | undefined
   onApprove: (result: { id: Hex.Hex }) => void
 }) {
-  const { address, chainId, defaultValue, decimals, tokenAddress, onApprove } =
-    props
+  const { address, chainId, defaultValue, onApprove } = props
 
   const [amount, setAmount] = React.useState<string>(
     defaultValue
@@ -580,12 +664,12 @@ function Faucet(props: {
       if (!address) throw new Error('address is required')
       if (!chainId) throw new Error('chainId is required')
 
-      const value = Value.from(amount, decimals ?? 18)
+      const value = Value.from(amount, 18)
 
       const data = await RelayActions.addFaucetFunds(client, {
         address,
         chainId: chainId,
-        tokenAddress: tokenAddress ?? exp1Address[chainId as never],
+        tokenAddress: exp1Address[chainId as never],
         value,
       })
       // relay state can be behind node state. wait to ensure sync.
@@ -607,14 +691,14 @@ function Faucet(props: {
         <PresetsInput
           adornments={{
             end: {
-              label: `Max. $${MAX_AMOUNT}`,
+              label: `Max. $${maxAmount}`,
               type: 'fill',
-              value: String(MAX_AMOUNT),
+              value: String(maxAmount),
             },
             start: '$',
           }}
           inputMode="decimal"
-          max={MAX_AMOUNT}
+          max={maxAmount}
           min={0}
           onChange={setAmount}
           placeholder="Enter amount"
@@ -645,24 +729,14 @@ function Faucet(props: {
 
 function DepositCrypto(props: {
   address: Address.Address | undefined
+  assetDeficits?: AddFunds.Props['assetDeficits']
   chainId: number | undefined
-  token: Tokens.Token | undefined
-  minValue: string | undefined
   nativeTokenName: string | undefined
-  tokenAddress: Address.Address | undefined
   view: View
   setView: (view: View) => void
 }) {
-  const {
-    address,
-    chainId,
-    token,
-    minValue,
-    nativeTokenName,
-    tokenAddress,
-    view,
-    setView,
-  } = props
+  const { address, assetDeficits, chainId, nativeTokenName, view, setView } =
+    props
 
   const { address: account, connector } = useAccount()
   const disconnect = useDisconnect()
@@ -677,10 +751,6 @@ function DepositCrypto(props: {
             params: [{ account, chainFilter: [hexChainId] }],
           })
           const assets = response[hexChainId] ?? []
-          const minAssetBalance = minValue
-            ? Value.from(minValue, token?.decimals ?? 18)
-            : 0n
-
           const nonZeroAssets = assets.filter(
             (asset) => asset.balance !== '0x0',
           )
@@ -694,17 +764,7 @@ function DepositCrypto(props: {
             ),
           )
 
-          const hasRequiredTokenAmount = assets.some((asset) => {
-            const address =
-              asset.type === 'native' ? zeroAddress : asset.address
-            const assetBalance = Hex.toBigInt(asset.balance)
-            return (
-              assetBalance > minAssetBalance &&
-              (tokenAddress
-                ? address?.toLowerCase() === tokenAddress.toLowerCase()
-                : true)
-            )
-          })
+          const hasRequiredTokenAmount = nonZeroAssets.length > 0
           setView(
             hasRequiredTokenAmount
               ? 'connected-wallet-transfer'
@@ -815,12 +875,6 @@ function DepositCrypto(props: {
                       (asset.type === 'native' ? nativeTokenName : asset.type)}
                   </div>
                   <Ariakit.FormCheckbox
-                    disabled={
-                      tokenAddress
-                        ? (asset.address ?? zeroAddress).toLowerCase() ===
-                          tokenAddress.toLowerCase()
-                        : false
-                    }
                     name={form.names[asset.address ?? zeroAddress] as string}
                   />
                 </label>
@@ -879,7 +933,11 @@ function DepositCrypto(props: {
       )
     return (
       <div className="flex flex-col gap-3">
-        <QRCard address={address ?? ''} token={token} />
+        <QRCard
+          address={address ?? ''}
+          assetDeficits={assetDeficits}
+          nativeTokenName={nativeTokenName}
+        />
         <Button
           onClick={() => {
             disconnect.disconnect()
@@ -924,13 +982,21 @@ function DepositCrypto(props: {
         ))}
       </div>
 
-      <QRCard address={address ?? ''} token={token} />
+      <QRCard
+        address={address ?? ''}
+        assetDeficits={assetDeficits}
+        nativeTokenName={nativeTokenName}
+      />
     </div>
   )
 }
 
-function QRCard(props: { address: string; token: Tokens.Token | undefined }) {
-  const { address, token } = props
+function QRCard(props: {
+  address: string
+  assetDeficits?: AddFunds.Props['assetDeficits']
+  nativeTokenName?: string
+}) {
+  const { address, assetDeficits, nativeTokenName } = props
   const [isCopied, copyToClipboard] = useCopyToClipboard({ timeout: 2_000 })
   return (
     <div className="flex items-center justify-between rounded-th_medium bg-th_secondary p-2">
@@ -943,7 +1009,7 @@ function QRCard(props: { address: string; token: Tokens.Token | undefined }) {
         </div>
         <div className="flex flex-col gap-0.5">
           <div className="font-medium text-[13px]">
-            Send {token?.symbol ?? 'directly'}
+            Send {assetDeficits?.[0]?.symbol ?? nativeTokenName ?? 'funds'}
           </div>
           <div className="min-w-[21ch] max-w-[21ch] text-pretty break-all font-mono font-normal text-[10px] text-th_base-secondary leading-[14px]">
             {address}

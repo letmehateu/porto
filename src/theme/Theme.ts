@@ -91,6 +91,10 @@ export type Theme<
   strongContent: SchemeColor
   strongBorder: SchemeColor
 
+  warningBackground: SchemeColor
+  warningContent: SchemeColor
+  warningBorder: SchemeColor
+
   fieldBackground: SchemeColor
   fieldContent: SchemeColor
   fieldContentSecondary: SchemeColor

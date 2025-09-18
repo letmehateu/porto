@@ -1,4 +1,11 @@
-import { Button, ButtonArea, CopyButton, Details, TokenIcon } from '@porto/ui'
+import {
+  Button,
+  ButtonArea,
+  ChainsPath,
+  CopyButton,
+  Details,
+  TokenIcon,
+} from '@porto/ui'
 import type * as Capabilities from 'porto/core/internal/relay/schema/capabilities'
 import * as React from 'react'
 import type { Chain } from 'viem'
@@ -6,7 +13,7 @@ import { PriceFormatter, StringFormatter, ValueFormatter } from '~/utils'
 import ArrowDown from '~icons/lucide/arrow-down'
 import LucideSendToBack from '~icons/lucide/send-to-back'
 import Star from '~icons/ph/star-four-bold'
-import { ActionRequest } from './ActionRequest'
+import type { ActionRequest } from './ActionRequest'
 import { Layout } from './Layout'
 
 export function Swap(props: Swap.Props) {
@@ -19,8 +26,11 @@ export function Swap(props: Swap.Props) {
     fetchingQuote,
     onApprove,
     onReject,
+    onAddFunds,
+    refreshingQuote,
     swapType,
     swapping,
+    hasDeficit,
   } = props
 
   const [fiatDisplay, setFiatDisplay] = React.useState(swapType !== 'convert')
@@ -87,17 +97,29 @@ export function Swap(props: Swap.Props) {
               </>
             )}
           </div>
-          <Details loading={fetchingQuote}>
+          <Details loading={fetchingQuote && !hasDeficit}>
             {feeFormatted && (
-              <div className="flex h-[18px] items-center justify-between text-[14px]">
-                <div className="text-th_base-secondary">Fees (est.)</div>
-                <div className="font-medium" title={feeFormatted.full}>
-                  {feeFormatted.short}
-                </div>
-              </div>
+              <Details.Item
+                label="Fees (est.)"
+                value={
+                  <div title={feeFormatted.full}>{feeFormatted.short}</div>
+                }
+              />
             )}
-            <ActionRequest.ChainsPath chainsPath={chainsPath} />
+            {chainsPath.length > 0 && (
+              <Details.Item
+                label={`Network${chainsPath.length > 1 ? 's' : ''}`}
+                value={
+                  <ChainsPath chainIds={chainsPath.map((chain) => chain.id)} />
+                }
+              />
+            )}
           </Details>
+          {hasDeficit && (
+            <div className="rounded-th_medium border border-th_warning bg-th_warning px-3 py-[10px] text-center text-sm text-th_warning">
+              You do not have enough funds.
+            </div>
+          )}
         </div>
       </Layout.Content>
 
@@ -111,21 +133,33 @@ export function Swap(props: Swap.Props) {
           >
             Cancel
           </Button>
-          <Button
-            disabled={fetchingQuote || !onApprove}
-            loading={
-              fetchingQuote
-                ? 'Refreshing quote…'
-                : swapping
-                  ? 'Swapping…'
-                  : undefined
-            }
-            onClick={onApprove}
-            variant="positive"
-            width="grow"
-          >
-            Swap
-          </Button>
+          {hasDeficit ? (
+            <Button
+              data-testid="add-funds"
+              disabled={!onAddFunds}
+              onClick={onAddFunds}
+              variant="primary"
+              width="grow"
+            >
+              Add funds
+            </Button>
+          ) : (
+            <Button
+              disabled={!onApprove || fetchingQuote}
+              loading={
+                refreshingQuote
+                  ? 'Refreshing quote…'
+                  : swapping
+                    ? 'Swapping…'
+                    : undefined
+              }
+              onClick={onApprove}
+              variant="positive"
+              width="grow"
+            >
+              Swap
+            </Button>
+          )}
         </Layout.Footer.Actions>
       </Layout.Footer>
     </Layout>
@@ -139,9 +173,12 @@ export namespace Swap {
     chainsPath: readonly Chain[]
     contractAddress?: `0x${string}` | undefined
     fees?: Capabilities.feeTotals.Response | undefined
-    fetchingQuote?: boolean | undefined
+    fetchingQuote: boolean
+    hasDeficit?: boolean | undefined
     onApprove: () => void
     onReject: () => void
+    onAddFunds?: () => void
+    refreshingQuote?: boolean | undefined
     swapType: 'swap' | 'convert'
     swapping?: boolean | undefined
   }
@@ -180,17 +217,19 @@ export namespace Swap {
             </div>
           </div>
           <ButtonArea
-            className="relative h-full min-w-0 rounded-[4px] font-medium text-[14px] text-th_base-secondary"
+            className="h-full min-w-0 rounded-[4px] font-medium text-[14px] text-th_base-secondary"
             disabled={!asset.fiat}
             onClick={() => onFiatDisplayChange(!fiatDisplay)}
             style={{ flex: '1 1 auto' }}
           >
-            <span
-              className="truncate"
-              title={fiatDisplay && fiatValue ? fiatValue : tokenValue}
-            >
-              {fiatDisplay && fiatValue ? fiatValue : tokenValue}
-            </span>
+            <div className="flex items-center justify-end">
+              <span
+                className="truncate"
+                title={fiatDisplay && fiatValue ? fiatValue : tokenValue}
+              >
+                {fiatDisplay && fiatValue ? fiatValue : tokenValue}
+              </span>
+            </div>
           </ButtonArea>
         </div>
       </div>
