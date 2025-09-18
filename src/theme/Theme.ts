@@ -38,6 +38,7 @@ export type Theme<
   baseContentTertiary: SchemeColor
   baseContentPositive: SchemeColor
   baseContentNegative: SchemeColor
+  baseContentWarning: SchemeColor
   baseHoveredBackground: SchemeColor
 
   frameBackground: SchemeColor
