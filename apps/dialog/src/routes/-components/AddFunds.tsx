@@ -1,4 +1,5 @@
 import * as Ariakit from '@ariakit/react'
+import { UserAgent } from '@porto/apps'
 import { exp1Address } from '@porto/apps/contracts'
 import { useCopyToClipboard, usePrevious } from '@porto/apps/hooks'
 import { Button, PresetsInput, Spinner } from '@porto/ui'
@@ -27,6 +28,7 @@ import {
   useWatchBlockNumber,
   WagmiProvider,
 } from 'wagmi'
+import * as z from 'zod/mini'
 import * as Dialog from '~/lib/Dialog'
 import { porto } from '~/lib/Porto'
 import * as Tokens from '~/lib/Tokens'
@@ -123,6 +125,8 @@ export function AddFunds(props: AddFunds.Props) {
 
   const referrer = Dialog.useStore((state) => state.referrer)
   const showApplePay = React.useMemo(() => {
+    if (UserAgent.isInAppBrowser()) return false
+    if (UserAgent.isMobile() && !UserAgent.isSafari()) return false
     return (
       referrer?.url?.hostname.endsWith('localhost') ||
       referrer?.url?.hostname === 'playground.porto.sh' ||
@@ -194,7 +198,12 @@ export function AddFunds(props: AddFunds.Props) {
       <Layout.Content>
         <div className="flex flex-col gap-3">
           {showApplePay && address && (
-            <Onramp address={address} minAmount={value} setView={setView} />
+            <Onramp
+              address={address}
+              minAmount={value}
+              onApprove={onApprove as () => void}
+              setView={setView}
+            />
           )}
 
           {showFaucet && (
@@ -248,9 +257,66 @@ export declare namespace AddFunds {
   }
 }
 
+const cbPostMessageSchema = z.union([
+  z.object({
+    eventName: z.union([
+      z.literal('onramp_api.apple_pay_button_pressed'),
+      z.literal('onramp_api.cancel'),
+      z.literal('onramp_api.commit_success'),
+      z.literal('onramp_api.load_pending'),
+      z.literal('onramp_api.load_success'),
+      z.literal('onramp_api.polling_start'),
+      z.literal('onramp_api.polling_success'),
+    ]),
+  }),
+  z.object({
+    data: z.object({
+      errorCode: z.union([
+        z.literal('ERROR_CODE_GUEST_APPLE_PAY_NOT_SETUP'),
+        z.literal('ERROR_CODE_GUEST_APPLE_PAY_NOT_SUPPORTED'),
+        z.literal('ERROR_CODE_INIT'),
+      ]),
+      errorMessage: z.string(),
+    }),
+    eventName: z.literal('onramp_api.load_error'),
+  }),
+  z.object({
+    data: z.object({
+      errorCode: z.union([
+        z.literal('ERROR_CODE_GUEST_CARD_HARD_DECLINED'),
+        z.literal('ERROR_CODE_GUEST_CARD_INSUFFICIENT_BALANCE'),
+        z.literal('ERROR_CODE_GUEST_CARD_PREPAID_DECLINED'),
+        z.literal('ERROR_CODE_GUEST_CARD_RISK_DECLINED'),
+        z.literal('ERROR_CODE_GUEST_CARD_SOFT_DECLINED'),
+        z.literal('ERROR_CODE_GUEST_INVALID_CARD'),
+        z.literal('ERROR_CODE_GUEST_PERMISSION_DENIED'),
+        z.literal('ERROR_CODE_GUEST_REGION_MISMATCH'),
+        z.literal('ERROR_CODE_GUEST_TRANSACTION_COUNT'),
+        z.literal('ERROR_CODE_GUEST_TRANSACTION_LIMIT'),
+      ]),
+      errorMessage: z.string(),
+    }),
+    eventName: z.literal('onramp_api.commit_error'),
+  }),
+  z.object({
+    data: z.object({
+      errorCode: z.union([
+        z.literal('ERROR_CODE_GUEST_TRANSACTION_BUY_FAILED'),
+        z.literal('ERROR_CODE_GUEST_TRANSACTION_SEND_FAILED'),
+        z.literal('ERROR_CODE_GUEST_TRANSACTION_TRANSACTION_FAILED'),
+        z.literal('ERROR_CODE_GUEST_TRANSACTION_AVS_VALIDATION_FAILED'),
+      ]),
+      errorMessage: z.string(),
+    }),
+    eventName: z.literal('onramp_api.polling_error'),
+  }),
+])
+type CbPostMessageSchema = z.infer<typeof cbPostMessageSchema>
+
 function Onramp(props: {
   address: Address.Address
   minAmount?: string | undefined
+  onApprove: () => void
   setView: (view: View) => void
 }) {
   const { address } = props
@@ -311,24 +377,37 @@ function Onramp(props: {
     },
   })
 
-  const [onrampState, setOnrampState] =
-    React.useState<`onramp_api.${'load_pending' | 'load_success' | 'load_error' | 'commit_success' | 'commit_error' | 'cancel' | 'polling_start' | 'polling_success' | 'polling_error' | 'apple_pay_button_pressed'}`>(
-      'onramp_api.load_pending',
-    )
+  const [onrampState, setOnrampState] = React.useState<CbPostMessageSchema>({
+    eventName: 'onramp_api.load_pending',
+  })
   // TODO: iframe loading timeout
   React.useEffect(() => {
     function handlePostMessage(event: MessageEvent) {
       if (event.origin !== 'https://pay.coinbase.com') return
-      const data = JSON.parse(event.data)
-      console.log(data)
-      if ('eventName' in data && data.eventName.startsWith('onramp_api.'))
-        setOnrampState(data.eventName)
+      try {
+        const data = z.parse(cbPostMessageSchema, JSON.parse(event.data))
+        console.log('postMessage', data)
+        if ('eventName' in data && data.eventName.startsWith('onramp_api.')) {
+          setOnrampState(data)
+          if (data.eventName === 'onramp_api.commit_success') {
+            props.onApprove()
+          }
+        }
+      } catch (error) {
+        setOnrampState({
+          data: {
+            errorCode: 'ERROR_CODE_GUEST_APPLE_PAY_NOT_SUPPORTED',
+            errorMessage: (error as Error).message ?? 'Something went wrong',
+          },
+          eventName: 'onramp_api.load_error',
+        })
+      }
     }
     window.addEventListener('message', handlePostMessage)
     return () => {
       window.removeEventListener('message', handlePostMessage)
     }
-  }, [])
+  }, [props.onApprove])
 
   if (view === 'start') {
     return (
@@ -389,7 +468,7 @@ function Onramp(props: {
             value={amount}
           />
         </div>
-        <div className="col-span-1 row-span-1 space-y-3.5">
+        <div className="col-span-1 row-span-1 space-y-1.5">
           <Button
             className="w-full flex-1"
             disabled={!address || !amount || Number(amount) === 0}
@@ -399,6 +478,18 @@ function Onramp(props: {
             width="grow"
           >
             Continue
+          </Button>
+          <Button
+            className="w-full flex-1"
+            onClick={() => {
+              props.setView('default')
+              setView('start')
+            }}
+            type="button"
+            variant="secondary"
+            width="grow"
+          >
+            Back
           </Button>
         </div>
       </form>
@@ -410,22 +501,37 @@ function Onramp(props: {
       {createOrder.isSuccess && createOrder.data?.url && (
         <iframe
           className={cx(
-            'w-full overflow-hidden border-0',
-            onrampState === 'onramp_api.load_pending'
-              ? 'mb-1.5 h-11! rounded-[56px] bg-black dark:bg-white'
-              : 'bg-transparent',
-            onrampState === 'onramp_api.apple_pay_button_pressed'
+            'w-full overflow-hidden border-0 bg-transparent',
+            onrampState.eventName === 'onramp_api.load_pending' &&
+              'mb-1.5 h-11!',
+            onrampState.eventName === 'onramp_api.apple_pay_button_pressed'
               ? 'overflow-visible! fixed inset-0 z-100 h-full'
-              : 'h-12.5 w-full border-0 bg-transparent',
+              : 'h-12.5 w-full border-0bg-transparent',
           )}
-          onError={() => setOnrampState('onramp_api.load_error')}
+          onError={() =>
+            setOnrampState({
+              data: {
+                errorCode: 'ERROR_CODE_INIT',
+                errorMessage: 'Failed to load',
+              },
+              eventName: 'onramp_api.load_error',
+            })
+          }
           referrerPolicy="no-referrer-when-downgrade"
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
           src={createOrder.data.url}
           title="Payment Link"
         />
       )}
-      <div>{onrampState}</div>
+      <Button
+        className="w-full flex-1"
+        onClick={() => setView('amount')}
+        type="button"
+        variant="secondary"
+        width="grow"
+      >
+        Back
+      </Button>
     </div>
   )
 }
