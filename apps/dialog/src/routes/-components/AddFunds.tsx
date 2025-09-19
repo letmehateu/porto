@@ -61,7 +61,7 @@ type View =
   | 'onramp'
 
 export function AddFunds(props: AddFunds.Props) {
-  const { chainId, onApprove, onReject, value, assetDeficits } = props
+  const { assetDeficits, chainId, onApprove, onReject, value } = props
 
   const [view, setView] = React.useState<View>('default')
 
@@ -118,6 +118,7 @@ export function AddFunds(props: AddFunds.Props) {
   }, [balanceMap, onApprove, previousBalanceMap])
 
   const showFaucet = React.useMemo(() => {
+    if (import.meta.env.MODE === 'test') return true
     // Don't show faucet if not on "default" view.
     if (view !== 'default') return false
     // Show faucet if on a testnet.
