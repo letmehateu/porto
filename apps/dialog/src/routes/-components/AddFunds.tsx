@@ -608,6 +608,7 @@ function Onramp(props: {
       {createOrder.isSuccess && createOrder.data?.url && (
         <iframe
           // TODO: tweak iframe styles
+          allow="payments"
           className={cx(
             'h-12.5 w-full overflow-hidden border-0 bg-transparent',
             onrampState.eventName === 'onramp_api.apple_pay_button_pressed'
