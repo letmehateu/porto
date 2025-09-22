@@ -94,8 +94,10 @@ export function AddFunds(props: AddFunds.Props) {
         (asset.address === 'native' || asset.type === 'native'
           ? zeroAddress
           : asset.address) ?? zeroAddress
-      if (tokenAddressMap.has(address))
-        addressBalanceMap.set(address, asset.balance)
+      if (tokenAddressMap.has(address)) {
+        const balance = addressBalanceMap.get(address)
+        addressBalanceMap.set(address, (balance ?? 0n) + asset.balance)
+      }
     }
     return addressBalanceMap
   }, [assets, tokens])

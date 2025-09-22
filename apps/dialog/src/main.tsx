@@ -79,7 +79,7 @@ const offDialogRequest = Events.onDialogRequest(
       account && account.address !== connectedAccount?.address
 
     // Clear errors when the request is null (i.e. when the dialog is closed).
-    if (!request) Dialog.store.setState({ error: null })
+    if (!request) return Dialog.store.setState({ error: null })
 
     if (requireAccountSync) {
       await Router.router.navigate({
