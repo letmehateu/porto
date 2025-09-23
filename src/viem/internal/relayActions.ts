@@ -228,10 +228,11 @@ export namespace getAssets {
 /**
  * Requests faucet funds to be sent to an address on the Relay.
  */
-export async function addFaucetFunds(
-  client: Client,
-  parameters: addFaucetFunds.Parameters,
+export async function addFaucetFunds<chain extends Chain | undefined>(
+  client: Client<Transport, chain>,
+  parameters: addFaucetFunds.Parameters<chain>,
 ): Promise<RpcSchema.wallet_addFaucetFunds.Response> {
+  const { address, chain = client.chain, tokenAddress, value } = parameters
   try {
     const method = 'wallet_addFaucetFunds' as const
     type Schema = Extract<RpcSchema.Viem[number], { Method: typeof method }>
@@ -239,13 +240,21 @@ export async function addFaucetFunds(
       {
         method,
         params: [
-          z.encode(RpcSchema.wallet_addFaucetFunds.Parameters, parameters),
+          z.encode(RpcSchema.wallet_addFaucetFunds.Parameters, {
+            address,
+            chainId: chain?.id!,
+            tokenAddress,
+            value,
+          }),
         ],
       },
       {
         retryCount: 0,
       },
     )
+    // relay state can be behind node state. wait to ensure sync.
+    // TODO: figure out how to resolve.
+    await new Promise((resolve) => setTimeout(resolve, 2_000))
     return result
   } catch (error) {
     parseSchemaError(error)
@@ -254,7 +263,9 @@ export async function addFaucetFunds(
 }
 
 export namespace addFaucetFunds {
-  export type Parameters = RpcSchema.wallet_addFaucetFunds.Parameters
+  export type Parameters<chain extends Chain | undefined = Chain | undefined> =
+    Omit<RpcSchema.wallet_addFaucetFunds.Parameters, 'chainId'> &
+      GetChainParameter<chain>
 }
 
 /**
