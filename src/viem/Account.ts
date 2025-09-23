@@ -95,7 +95,11 @@ export declare namespace from {
     Assign<
       Account,
       account extends AccountParameter ? account : { address: account }
-    >
+    > & {
+      source: account extends { sign: NonNullable<LocalAccount['sign']> }
+        ? 'privateKey'
+        : 'porto'
+    }
   >
 }
 

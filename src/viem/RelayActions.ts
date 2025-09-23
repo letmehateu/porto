@@ -626,6 +626,7 @@ export declare namespace setEmail {
  * @param parameters - Parameters.
  * @returns Result.
  */
+// @ts-expect-error
 export async function upgradeAccount<chain extends Chain | undefined>(
   client: Client<Transport, chain>,
   parameters: upgradeAccount.Parameters<chain>,
