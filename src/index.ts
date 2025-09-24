@@ -3,6 +3,8 @@ export * as Dialog from './core/Dialog.js'
 export {
   /** @internal @deprecated export required for inference. */
   from,
+  /** @internal @deprecated export required for inference. */
+  type Provider,
 } from './core/internal/provider.js'
 export * as Messenger from './core/Messenger.js'
 export * as Mode from './core/Mode.js'
