@@ -28,7 +28,10 @@ export const defaultConfig = {
   chains: Chains.all,
   mode: browser ? dialog({ host: hostUrls.prod }) : relay(),
   relay: http(relayUrls.prod.http),
-  storage: browser ? Storage.idb() : Storage.memory(),
+  storage:
+    browser && typeof indexedDB !== 'undefined'
+      ? Storage.idb()
+      : Storage.memory(),
   storageKey: 'porto.store',
 } as const satisfies ExactPartial<Config>
 
