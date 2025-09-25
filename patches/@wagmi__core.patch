@@ -1,15 +1,23 @@
-diff --git a/dist/esm/actions/waitForCallsStatus.js b/dist/esm/actions/waitForCallsStatus.js
-index f260e6aaf5543776608a5568a10c48819de376c3..85e49e16860a1a1d21ed5d1a0535df606553ae65 100644
---- a/dist/esm/actions/waitForCallsStatus.js
-+++ b/dist/esm/actions/waitForCallsStatus.js
-@@ -2,8 +2,8 @@ import { waitForCallsStatus as viem_waitForCallsStatus, } from 'viem/actions';
- import { getConnectorClient } from './getConnectorClient.js';
- /** https://wagmi.sh/core/api/actions/waitForCallsStatus */
- export async function waitForCallsStatus(config, parameters) {
--    const { connector, id } = parameters;
-+    const { connector } = parameters;
-     const client = await getConnectorClient(config, { connector });
--    return viem_waitForCallsStatus(client, { id });
-+    return viem_waitForCallsStatus(client, parameters);
- }
- //# sourceMappingURL=waitForCallsStatus.js.map
+diff --git a/dist/esm/actions/getConnectorClient.js b/dist/esm/actions/getConnectorClient.js
+index 5dc2c9997bc58cc45f38b3d27bef2eeddf13237c..e1cb33e8751c957546dd87539a237fa4b230899a 100644
+--- a/dist/esm/actions/getConnectorClient.js
++++ b/dist/esm/actions/getConnectorClient.js
+@@ -31,12 +31,12 @@ export async function getConnectorClient(config, parameters = {}) {
+         throw new ConnectorNotConnectedError();
+     const chainId = parameters.chainId ?? connection.chainId;
+     // Check connector using same chainId as connection
+-    const connectorChainId = await connection.connector.getChainId();
+-    if (connectorChainId !== chainId)
+-        throw new ConnectorChainMismatchError({
+-            connectionChainId: chainId,
+-            connectorChainId,
+-        });
++    // const connectorChainId = await connection.connector.getChainId();
++    // if (connectorChainId !== chainId)
++    //     throw new ConnectorChainMismatchError({
++    //         connectionChainId: chainId,
++    //         connectorChainId,
++    //     });
+     const connector = connection.connector;
+     if (connector.getClient)
+         return connector.getClient({ chainId });
