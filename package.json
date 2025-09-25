@@ -136,8 +136,7 @@
     },
     "patchedDependencies": {
       "@tanstack/react-router": "patches/@tanstack__react-router.patch",
-      "@wagmi/cli": "patches/@wagmi__cli.patch",
-      "@wagmi/core": "patches/@wagmi__core.patch"
+      "@wagmi/cli": "patches/@wagmi__cli.patch"
     }
   }
 }
