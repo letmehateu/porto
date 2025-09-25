@@ -743,7 +743,7 @@ function DepositCrypto(props: {
     mutation: {
       async onSuccess(data) {
         if (chainId) {
-          const account = data.accounts[0]
+          const account = data.accounts[0] as `0x${string}`
           const hexChainId = Hex.fromNumber(chainId)
           const response = await porto.provider.request({
             method: 'wallet_getAssets',
