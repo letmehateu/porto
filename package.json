@@ -130,9 +130,9 @@
   "pnpm": {
     "overrides": {
       "abitype": "latest",
-      "ox": "latest",
+      "ox": "catalog:",
       "porto": "workspace:*",
-      "viem": "latest"
+      "viem": "catalog:"
     },
     "patchedDependencies": {
       "@tanstack/react-router": "patches/@tanstack__react-router.patch",
