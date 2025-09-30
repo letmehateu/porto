@@ -12,18 +12,11 @@ describe.runIf(!Anvil.enabled)('getTokens', () => {
     const tokens = await Tokens.getTokens(client)
 
     expect(
-      tokens.map((x) => ({ ...x, nativeRate: null })),
+      tokens
+        .toSorted((a, b) => a.symbol.localeCompare(b.symbol))
+        .map((x) => ({ ...x, nativeRate: null })),
     ).toMatchInlineSnapshot(`
       [
-        {
-          "address": "0xacb60ce1e9d71c15a34c3afd903f552520b4a28f",
-          "decimals": 18,
-          "feeToken": true,
-          "interop": true,
-          "nativeRate": null,
-          "symbol": "EXP2",
-          "uid": "exp2",
-        },
         {
           "address": "0x0000000000000000000000000000000000000000",
           "decimals": 18,
@@ -42,6 +35,15 @@ describe.runIf(!Anvil.enabled)('getTokens', () => {
           "symbol": "EXP",
           "uid": "exp1",
         },
+        {
+          "address": "0xacb60ce1e9d71c15a34c3afd903f552520b4a28f",
+          "decimals": 18,
+          "feeToken": true,
+          "interop": true,
+          "nativeRate": null,
+          "symbol": "EXP2",
+          "uid": "exp2",
+        },
       ]
     `)
   })
@@ -53,18 +55,11 @@ describe.runIf(!Anvil.enabled)('getTokens', () => {
     const tokens = await Tokens.getTokens(client, { chain: Chains.polygon })
 
     expect(
-      tokens.map((x) => ({ ...x, nativeRate: null })),
+      tokens
+        .toSorted((a, b) => a.symbol.localeCompare(b.symbol))
+        .map((x) => ({ ...x, nativeRate: null })),
     ).toMatchInlineSnapshot(`
       [
-        {
-          "address": "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
-          "decimals": 6,
-          "feeToken": true,
-          "interop": true,
-          "nativeRate": null,
-          "symbol": "USDC",
-          "uid": "usd-coin",
-        },
         {
           "address": "0x0000000000000000000000000000000000000000",
           "decimals": 18,
@@ -73,6 +68,15 @@ describe.runIf(!Anvil.enabled)('getTokens', () => {
           "nativeRate": null,
           "symbol": "POL",
           "uid": "matic-network",
+        },
+        {
+          "address": "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+          "decimals": 6,
+          "feeToken": true,
+          "interop": true,
+          "nativeRate": null,
+          "symbol": "USDC",
+          "uid": "usd-coin",
         },
         {
           "address": "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
