@@ -1562,7 +1562,7 @@ function SignTypedMessage() {
         setError(String(err))
       }
     }
-    verifySignature()
+    void verifySignature()
 
     return () => {
       cancel = true
