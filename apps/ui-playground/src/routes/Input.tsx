@@ -52,6 +52,36 @@ function InputComponent() {
               start: '$',
             }}
           />
+          <DemoInput
+            adornments={{
+              start: { label: 'USD', type: 'solid' },
+            }}
+            placeholder="0.00"
+          />
+          <DemoInput
+            adornments={{
+              end: { type: 'valid' },
+            }}
+            type="email"
+            value="example@example.org"
+          />
+          <DemoInput
+            adornments={{
+              end: { type: 'required' },
+            }}
+            placeholder="example@ithaca.xyz"
+            type="email"
+          />
+          <DemoInput
+            adornments={{
+              start: {
+                prefixes: ['+1', '+44'],
+                type: 'phone-prefix',
+              },
+            }}
+            placeholder="+1 (650) 555-1234"
+            type="tel"
+          />
         </div>
       </ComponentScreen.Section>
     </ComponentScreen>

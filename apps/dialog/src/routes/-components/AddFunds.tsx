@@ -313,7 +313,6 @@ function Onramp(props: {
   if (view === 'start') {
     return (
       <Button
-        className="w-full flex-1"
         onClick={() => {
           props.setView('onramp')
           setView('amount')
@@ -331,7 +330,7 @@ function Onramp(props: {
   if (view === 'amount') {
     return (
       <form
-        className="grid h-min grid-flow-row auto-rows-min grid-cols-1 space-y-3"
+        className="grid h-min w-full grid-flow-row auto-rows-min grid-cols-1 space-y-3"
         onSubmit={(event) => {
           event.preventDefault()
           event.stopPropagation()
@@ -409,7 +408,7 @@ function Onramp(props: {
   }
 
   return (
-    <div>
+    <div className="w-full">
       {createOrder.isSuccess && createOrder.data?.url && (
         <iframe
           // TODO: tweak iframe styles
