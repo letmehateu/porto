@@ -411,6 +411,7 @@ function Onramp(props: {
     <div className="w-full">
       {createOrder.isSuccess && createOrder.data?.url && (
         <iframe
+          allow="payment"
           // TODO: tweak iframe styles
           className={cx(
             'h-12.5 w-full overflow-hidden border-0 bg-transparent',
